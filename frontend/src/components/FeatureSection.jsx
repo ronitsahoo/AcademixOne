@@ -1,4 +1,10 @@
 import { useState, useEffect } from 'react'
+import studentImg from '../assets/student.png'
+import assignmentImg from '../assets/assignment.png'
+import academicImg from '../assets/academic.png'
+import facultyImg from '../assets/faculty.png'
+import adminImg from '../assets/admin.png'
+import notificationImg from '../assets/notification.png'
 
 function FeatureSection() {
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -7,32 +13,32 @@ function FeatureSection() {
     {
       title: "Student Dashboard",
       description: "Access personalized academic feeds, track assignments, monitor grades, and view attendance records in real-time",
-      icon: "👩‍🎓"
+      icon: studentImg
     },
     {
       title: "Assignment Management",
       description: "Submit assignments electronically, track submission deadlines, and monitor grading status with comprehensive feedback",
-      icon: "📚"
+      icon: assignmentImg
     },
     {
       title: "Academic Analytics",
       description: "View detailed subject-wise attendance reports, exam performance metrics, and comprehensive grade analytics",
-      icon: "📊"
+      icon: academicImg
     },
     {
       title: "Faculty Portal",
       description: "Create and manage assignments, grade student submissions, and maintain attendance records efficiently",
-      icon: "👩‍🏫"
+      icon: facultyImg
     },
     {
       title: "Administrative Control",
       description: "Manage user accounts, publish institutional announcements, and configure platform settings",
-      icon: "👨‍💼"
+      icon: adminImg
     },
     {
       title: "Communication Hub",
       description: "Receive real-time notifications for assignments, deadlines, grade updates, and institutional announcements",
-      icon: "🔔"
+      icon: notificationImg
     }
   ]
 
@@ -93,10 +99,12 @@ function FeatureSection() {
       <div className="flex-1 relative">
         <div className="flex space-x-6 overflow-x-auto pb-6 scrollbar-hide feature-scroll h-full items-center">
           {features.map((feature, index) => (
-            <div key={index} className="flex-shrink-0 w-80 bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10 hover:bg-white/10 transition-all duration-300 shadow-lg min-h-[280px] flex flex-col justify-center">
-              <div className="text-5xl mb-6 flex justify-center">{feature.icon}</div>
+            <div key={index} className="flex-shrink-0 w-80 h-72 bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10 hover:bg-white/10 transition-all duration-300 shadow-lg flex flex-col justify-center">
+              <div className="text-5xl mb-6 flex justify-center">
+                <img src={feature.icon} alt={feature.title} className="w-16 h-16 object-contain" />
+              </div>
               <h3 className="text-xl font-semibold text-white mb-4 text-center">{feature.title}</h3>
-              <p className="text-gray-300 text-sm leading-relaxed text-center opacity-90 flex-1">{feature.description}</p>
+              <p className="text-gray-300 text-sm leading-relaxed text-center opacity-90 flex-1 line-clamp-3 overflow-hidden">{feature.description}</p>
             </div>
           ))}
         </div>
