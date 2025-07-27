@@ -69,12 +69,12 @@ function LoginPage() {
       {/* Theme Toggle */}
       <ThemeToggle />
       
-      <div className="flex h-screen">
+      <div className="flex min-h-screen">
         {/* Left Half - Features */}
         <FeatureSection />
         
         {/* Right Half - Login/Signup Form */}
-        <div className="w-1/2 flex items-center justify-center p-8">
+        <div className="w-1/2 flex items-center justify-center min-h-screen p-8">
           <AuthForm 
             isLogin={isLogin}
             setIsLogin={setIsLogin}

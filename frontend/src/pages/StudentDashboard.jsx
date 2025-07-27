@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import ThemeToggle from '../components/ThemeToggle'
+import logo from '../assets/logo.png'
 
 function StudentDashboard() {
   const [user, setUser] = useState(null)
@@ -33,7 +34,8 @@ function StudentDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">AcademixOne - Student Portal</h1>
+              <img src={logo} alt="AcademixOne Logo" className="h-12 w-auto mx-auto" />
+              <h1 className="ml-4 text-2xl font-bold text-gray-900 dark:text-white">Student Portal</h1>
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-gray-700 dark:text-gray-300">Welcome, {user.email}</span>

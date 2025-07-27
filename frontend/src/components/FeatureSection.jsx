@@ -5,6 +5,7 @@ import academicImg from '../assets/academic.png'
 import facultyImg from '../assets/faculty.png'
 import adminImg from '../assets/admin.png'
 import notificationImg from '../assets/notification.png'
+import logo from '../assets/logo.png'
 
 function FeatureSection() {
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -86,13 +87,10 @@ function FeatureSection() {
   }, [])
 
   return (
-    <div className="w-1/2 bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 p-8 relative overflow-hidden flex flex-col h-full">
-      {/* Brand Name */}
+    <div className="w-1/2 bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 p-8 relative overflow-hidden flex flex-col min-h-screen">
+      {/* Logo */}
       <div className="text-center mb-6 flex-shrink-0">
-        <h1 className="text-5xl font-bold text-white mb-3 tracking-tight">AcademixOne</h1>
-        <p className="text-gray-300 text-lg font-medium mb-2">Comprehensive Educational Management System</p>
-        <p className="text-blue-400 text-sm italic mb-4">"One Platform for Every Academic Need."</p>
-        <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-slate-400 mx-auto mt-4 rounded-full"></div>
+        <img src={logo} alt="AcademixOne Logo" className="mx-auto max-h-32 w-auto" />
       </div>
 
       {/* Features Section */}
