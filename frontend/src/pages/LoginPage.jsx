@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import FeatureSection from '../components/FeatureSection'
 import AuthForm from '../components/AuthForm'
 import ThemeToggle from '../components/ThemeToggle'
 
 function LoginPage() {
+  const navigate = useNavigate()
   const [isLogin, setIsLogin] = useState(true)
   const [formData, setFormData] = useState({
     email: '',
@@ -30,7 +32,11 @@ function LoginPage() {
       if (user) {
         localStorage.setItem('isAuthenticated', 'true')
         localStorage.setItem('user', JSON.stringify(user))
-        window.location.reload() // Reload to trigger App.jsx useEffect
+        if (user.role === 'student') {
+          navigate('/student-dashboard')
+        } else if (user.role === 'teacher') {
+          navigate('/teacher-dashboard')
+        }
       } else {
         alert('Invalid email or password. Please try again or sign up.')
       }
@@ -60,7 +66,11 @@ function LoginPage() {
       localStorage.setItem('users', JSON.stringify(users))
       localStorage.setItem('isAuthenticated', 'true')
       localStorage.setItem('user', JSON.stringify(newUser))
-      window.location.reload() // Reload to trigger App.jsx useEffect
+      if (newUser.role === 'student') {
+        navigate('/student-dashboard')
+      } else if (newUser.role === 'teacher') {
+        navigate('/teacher-dashboard')
+      }
     }
   }
 

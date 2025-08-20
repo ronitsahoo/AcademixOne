@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import ThemeToggle from '../components/ThemeToggle'
 import logo from '../assets/logo.png'
 
 function StudentDashboard() {
+  const navigate = useNavigate()
   const [user, setUser] = useState(null)
   const [activeTab, setActiveTab] = useState('overview')
 
@@ -11,14 +13,25 @@ function StudentDashboard() {
     if (userData && userData.role === 'student') {
       setUser(userData)
     } else {
-      window.location.href = '/'
+      navigate('/')
     }
   }, [])
 
   const handleLogout = () => {
     localStorage.removeItem('user')
     localStorage.removeItem('isAuthenticated')
-    window.location.href = '/'
+    navigate('/')
+  }
+
+  const handleCourseClick = (courseName) => {
+    // Convert course name to URL-friendly format
+    const courseId = courseName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    navigate(`/course/${courseId}`)
+  }
+
+  const handleJoinCourse = (courseName) => {
+    // Implement join course logic here
+    console.log(`Joining course: ${courseName}`)
   }
 
   if (!user) {
@@ -35,7 +48,6 @@ function StudentDashboard() {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
               <img src={logo} alt="AcademixOne Logo" className="h-12 w-auto mx-auto" />
-              <h1 className="ml-4 text-2xl font-bold text-gray-900 dark:text-white">Student Portal</h1>
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-gray-700 dark:text-gray-300">Welcome, {user.email}</span>
@@ -56,9 +68,9 @@ function StudentDashboard() {
           <div className="flex space-x-8">
             {[
               { id: 'overview', name: 'Overview', icon: '📊' },
-              { id: 'courses', name: 'My Courses', icon: '📚' },
+              { id: 'courses', name: 'Courses', icon: '📚' },
               { id: 'assignments', name: 'Assignments', icon: '📝' },
-              { id: 'grades', name: 'Grades', icon: '📈' },
+              { id: 'marks', name: 'Marks', icon: '📈' },
               { id: 'schedule', name: 'Schedule', icon: '📅' },
               { id: 'resources', name: 'Resources', icon: '📁' }
             ].map((tab) => (
@@ -86,11 +98,10 @@ function StudentDashboard() {
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard Overview</h2>
             
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
-                { title: 'Enrolled Courses', value: '6', color: 'blue', icon: '📚' },
+                { title: 'Enrolled Courses', value: '3', color: 'blue', icon: '📚' },
                 { title: 'Pending Assignments', value: '3', color: 'yellow', icon: '📝' },
-                { title: 'Average Grade', value: 'A-', color: 'green', icon: '📈' },
                 { title: 'Next Class', value: '2:30 PM', color: 'purple', icon: '⏰' }
               ].map((stat) => (
                 <div key={stat.title} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -129,39 +140,68 @@ function StudentDashboard() {
 
         {activeTab === 'courses' && (
           <div className="space-y-6">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">My Courses</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[
-                { name: 'Mathematics 101', instructor: 'Dr. Smith', progress: 75, grade: 'A-' },
-                { name: 'Physics Lab', instructor: 'Prof. Johnson', progress: 60, grade: 'B+' },
-                { name: 'Computer Science', instructor: 'Dr. Williams', progress: 90, grade: 'A' },
-                { name: 'English Literature', instructor: 'Prof. Brown', progress: 45, grade: 'B' },
-                { name: 'Chemistry', instructor: 'Dr. Davis', progress: 80, grade: 'A-' },
-                { name: 'History', instructor: 'Prof. Wilson', progress: 70, grade: 'B+' }
-              ].map((course) => (
-                <div key={course.name} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{course.name}</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Instructor: {course.instructor}</p>
-                  <div className="space-y-3">
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600 dark:text-gray-400">Progress</span>
-                        <span className="text-gray-900 dark:text-white font-medium">{course.progress}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${course.progress}%` }}
-                        ></div>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Courses</h2>
+            
+            {/* Enrolled Courses */}
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Enrolled Courses</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[
+                  { name: 'Full Stack Development', instructor: 'Ms. Rupali Kale', progress: 75, semester: 'Fall 2024', department: 'Computer Science' },
+                  { name: 'Data Mining and Business Intelligence', instructor: 'Dr. Ravita Mishra', progress: 60, semester: 'Fall 2024', department: 'Computer Science' },
+                  { name: 'Computer Network and Security', instructor: 'Mr. Abhishek Chaudhari', progress: 90, semester: 'Fall 2024', department: 'Computer Science' }
+                ].map((course) => (
+                  <div 
+                    key={course.name} 
+                    onClick={() => handleCourseClick(course.name)}
+                    className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 cursor-pointer hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200"
+                  >
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{course.name}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Instructor: {course.instructor}</p>
+                    <div className="space-y-3">
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-600 dark:text-gray-400">Progress</span>
+                          <span className="text-gray-900 dark:text-white font-medium">{course.progress}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${course.progress}%` }}
+                          ></div>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Current Grade:</span>
-                      <span className="font-semibold text-gray-900 dark:text-white">{course.grade}</span>
+                    <div className="mt-4 text-sm text-blue-600 dark:text-blue-400 font-medium">
+                      Click to view course details →
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
+
+            {/* Available Courses */}
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Available Courses</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[
+                  { name: 'Agile Software Development', instructor: 'Dr.(Mrs.) Shalu Chopra', semester: 'Fall 2024', department: 'Computer Science' },
+                  { name: 'Cloud Computing and Services', instructor: 'Mr. Krishnaji Salgaonkar', semester: 'Fall 2024', department: 'Computer Science' },
+                  { name: 'Solid and Hazardous Waste', instructor: 'Mrs. Anuradha Jadiya', semester: 'Fall 2024', department: 'Computer Science' }
+                ].filter(course => course.semester === 'Fall 2024' && course.department === 'Computer Science')
+                .map((course) => (
+                  <div key={course.name} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{course.name}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Instructor: {course.instructor}</p>
+                    <button
+                      onClick={() => handleJoinCourse(course.name)}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+                    >
+                      Join Course
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -169,7 +209,10 @@ function StudentDashboard() {
         {activeTab === 'assignments' && (
           <div className="space-y-6">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Assignments</h2>
+            
+            {/* Pending Assignments */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white p-6">Pending Assignments</h3>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-gray-700">
@@ -177,30 +220,46 @@ function StudentDashboard() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Assignment</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Course</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Due Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Grade</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {[
-                      { name: 'Calculus Problem Set', course: 'Mathematics 101', dueDate: '2024-01-15', status: 'Pending', grade: '-' },
-                      { name: 'Lab Report', course: 'Physics Lab', dueDate: '2024-01-12', status: 'Submitted', grade: 'A-' },
-                      { name: 'Programming Assignment', course: 'Computer Science', dueDate: '2024-01-20', status: 'Pending', grade: '-' },
-                      { name: 'Essay Draft', course: 'English Literature', dueDate: '2024-01-18', status: 'Submitted', grade: 'B+' }
+                      { name: 'Calculus Problem Set', course: 'Mathematics 101', dueDate: '2024-01-15' },
+                      { name: 'Programming Assignment', course: 'Computer Science', dueDate: '2024-01-20' }
                     ].map((assignment, index) => (
                       <tr key={index}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{assignment.name}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{assignment.course}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{assignment.dueDate}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            assignment.status === 'Submitted' 
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                          }`}>
-                            {assignment.status}
-                          </span>
-                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Submitted Assignments */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white p-6">Submitted Assignments</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Assignment</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Course</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Submission Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Grade</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {[
+                      { name: 'Lab Report', course: 'Physics Lab', submissionDate: '2024-01-12', grade: 'A-' },
+                      { name: 'Essay Draft', course: 'English Literature', submissionDate: '2024-01-18', grade: 'B+' }
+                    ].map((assignment, index) => (
+                      <tr key={index}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{assignment.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{assignment.course}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{assignment.submissionDate}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{assignment.grade}</td>
                       </tr>
                     ))}
@@ -211,40 +270,50 @@ function StudentDashboard() {
           </div>
         )}
 
-        {activeTab === 'grades' && (
+        {activeTab === 'marks' && (
           <div className="space-y-6">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Grades</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">GPA Overview</h3>
-                <div className="text-center">
-                  <div className="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2">3.75</div>
-                  <p className="text-gray-600 dark:text-gray-400">Current GPA</p>
-                </div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Grade Distribution</h3>
-                <div className="space-y-3">
-                  {[
-                    { grade: 'A', count: 8, percentage: 40 },
-                    { grade: 'B', count: 6, percentage: 30 },
-                    { grade: 'C', count: 4, percentage: 20 },
-                    { grade: 'D', count: 2, percentage: 10 }
-                  ].map((item) => (
-                    <div key={item.grade} className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">{item.grade}</span>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full"
-                            style={{ width: `${item.percentage}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-sm text-gray-600 dark:text-gray-400 w-8">{item.count}</span>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Marks</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Assessment Marks</h3>
+              <div className="space-y-6">
+                {[
+                  {
+                    course: 'Full Stack Development',
+                    midTerm: 18,
+                    assessments: [
+                      { type: 'PPT Presentation', marks: '23/25 '},
+                      { type: 'Quiz 1', marks: '8/10' },
+                      { type: 'Quiz 2', marks: '9/10' }
+                    ]
+                  },
+                  {
+                    course: 'Data Mining and Business Intelligence',
+                    midTerm: 18,
+                    assessments: [
+                      { type: 'PPT Presentation', marks: '23/25 '},
+                      { type: 'Quiz 1', marks: '8/10' },
+                      { type: 'Quiz 2', marks: '9/10' }
+                    ]
+                  }
+                ].map((course, index) => (
+                  <div key={index} className="border-b border-gray-200 dark:border-gray-700 pb-4 last:border-b-0">
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{course.course}</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Mid-Term</p>
+                        <p className="text-lg font-bold text-gray-900 dark:text-white">{course.midTerm}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Continuous Assessments</p>
+                        {course.assessments.map((assessment, idx) => (
+                          <p key={idx} className="text-sm text-gray-900 dark:text-white">
+                            {assessment.type}: {assessment.marks}
+                          </p>
+                        ))}
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -283,19 +352,36 @@ function StudentDashboard() {
         {activeTab === 'resources' && (
           <div className="space-y-6">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Learning Resources</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="space-y-8">
               {[
-                { title: 'Course Materials', icon: '📚', count: '24 files' },
-                { title: 'Study Guides', icon: '📖', count: '12 guides' },
-                { title: 'Video Lectures', icon: '🎥', count: '8 videos' },
-                { title: 'Practice Tests', icon: '📝', count: '15 tests' },
-                { title: 'Research Papers', icon: '📄', count: '6 papers' },
-                { title: 'Tutorial Videos', icon: '🎬', count: '10 videos' }
-              ].map((resource) => (
-                <div key={resource.title} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow duration-200 cursor-pointer">
-                  <div className="text-3xl mb-4">{resource.icon}</div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{resource.title}</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{resource.count}</p>
+                {
+                  course: 'Full Stack Development',
+                  resources: [
+                    { title: 'Lecture Notes', type: 'PDF', count: '8 files' },
+                    { title: 'Video Lectures', type: 'Video', count: '4 videos' },
+                    { title: 'Practice Tests', type: 'PDF', count: '3 tests' }
+                  ]
+                },
+                {
+                  course: 'Data Mining and Business Intelligence',
+                  resources: [
+                    { title: 'Study Guides', type: 'PDF', count: '5 guides' },
+                    { title: 'Research Papers', type: 'PDF', count: '2 papers' },
+                    { title: 'Tutorial Videos', type: 'Video', count: '3 videos' }
+                  ]
+                }
+              ].map((subject, index) => (
+                <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{subject.course}</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {subject.resources.map((resource) => (
+                      <div key={resource.title} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow duration-200 cursor-pointer">
+                        <div className="text-2xl mb-2">{resource.type === 'PDF' ? '📄' : '🎥'}</div>
+                        <h4 className="text-sm font-medium text-gray-900 dark:text-white">{resource.title}</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{resource.count}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
@@ -306,4 +392,4 @@ function StudentDashboard() {
   )
 }
 
-export default StudentDashboard 
+export default StudentDashboard

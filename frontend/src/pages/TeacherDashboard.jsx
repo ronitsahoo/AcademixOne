@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import ThemeToggle from '../components/ThemeToggle'
 import logo from '../assets/logo.png'
 
 function TeacherDashboard() {
+  const navigate = useNavigate()
   const [user, setUser] = useState(null)
   const [activeTab, setActiveTab] = useState('overview')
 
@@ -11,14 +13,14 @@ function TeacherDashboard() {
     if (userData && userData.role === 'teacher') {
       setUser(userData)
     } else {
-      window.location.href = '/'
+      navigate('/')
     }
   }, [])
 
   const handleLogout = () => {
     localStorage.removeItem('user')
     localStorage.removeItem('isAuthenticated')
-    window.location.href = '/'
+    navigate('/')
   }
 
   if (!user) {
