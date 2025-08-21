@@ -9,73 +9,68 @@ function CourseDetails() {
   const [user, setUser] = useState(null)
   const [activeTab, setActiveTab] = useState('syllabus')
   const [course, setCourse] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    const userData = JSON.parse(localStorage.getItem('user'))
-    if (userData && userData.role === 'student') {
-      setUser(userData)
-    } else {
-      navigate('/')
-    }
+    const fetchData = async () => {
+      try {
+        setIsLoading(true)
+        const userData = JSON.parse(localStorage.getItem('user'))
+        if (userData && userData.role === 'student') {
+          setUser(userData)
+        } else {
+          navigate('/')
+          return
+        }
 
-    // Mock course data - in real app, fetch from API
-    const courseData = getCourseData(courseId)
-    setCourse(courseData)
+        // Load course data from localStorage
+        const courses = JSON.parse(localStorage.getItem('teacherCourses') || '[]')
+        const courseData = courses.find((c) => c.id === courseId) || getCourseData(courseId)
+        setCourse(courseData)
+      } catch (err) {
+        setError('Failed to load course data. Please try again.')
+        console.error('Error fetching course data:', err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchData()
   }, [courseId, navigate])
 
   const getCourseData = (id) => {
-    const courses = {
+    const mockCourses = {
       'full-stack-development': {
         id: 'full-stack-development',
         name: 'Full Stack Development',
         instructor: 'Ms. Rupali Kale',
-        semester: 'Fall 2024',
-        department: 'Computer Science',
-        credits: 4,
+        semester: 'Semester 5',
+        department: 'Information Technology',
+        credits: 3,
         progress: 75,
         description: 'Comprehensive course covering modern web development technologies including frontend and backend development.',
         syllabus: [
           {
             unit: 'Unit 1: Introduction to Web Development',
-            topics: [
-              'HTML5 and CSS3 Fundamentals',
-              'Responsive Design Principles',
-              'JavaScript ES6+ Features',
-              'DOM Manipulation'
-            ],
+            topics: ['HTML5 and CSS3 Fundamentals', 'Responsive Design Principles', 'JavaScript ES6+ Features', 'DOM Manipulation'],
             completed: true,
             completionDate: '2024-01-15'
           },
           {
             unit: 'Unit 2: Frontend Frameworks',
-            topics: [
-              'React.js Fundamentals',
-              'Component Architecture',
-              'State Management',
-              'React Hooks'
-            ],
+            topics: ['React.js Fundamentals', 'Component Architecture', 'State Management', 'React Hooks'],
             completed: true,
             completionDate: '2024-02-10'
           },
           {
             unit: 'Unit 3: Backend Development',
-            topics: [
-              'Node.js and Express.js',
-              'RESTful API Design',
-              'Database Integration',
-              'Authentication & Authorization'
-            ],
+            topics: ['Node.js and Express.js', 'RESTful API Design', 'Database Integration', 'Authentication & Authorization'],
             completed: false,
             currentTopic: 'RESTful API Design'
           },
           {
             unit: 'Unit 4: Advanced Topics',
-            topics: [
-              'Deployment Strategies',
-              'Performance Optimization',
-              'Testing Methodologies',
-              'DevOps Basics'
-            ],
+            topics: ['Deployment Strategies', 'Performance Optimization', 'Testing Methodologies', 'DevOps Basics'],
             completed: false
           }
         ],
@@ -86,7 +81,6 @@ function CourseDetails() {
             description: 'Create a responsive portfolio website using HTML, CSS, and JavaScript',
             dueDate: '2024-01-20',
             status: 'submitted',
-            grade: 'A-',
             submissionDate: '2024-01-18',
             maxMarks: 100,
             obtainedMarks: 92
@@ -97,7 +91,6 @@ function CourseDetails() {
             description: 'Build a todo application using React with CRUD operations',
             dueDate: '2024-02-15',
             status: 'submitted',
-            grade: 'A',
             submissionDate: '2024-02-14',
             maxMarks: 100,
             obtainedMarks: 95
@@ -150,14 +143,22 @@ function CourseDetails() {
           },
           {
             title: 'Class Schedule Change',
-            content: 'Next week\'s class will be held in Lab 201 instead of Room 301.',
+            content: "Next week's class will be held in Lab 201 instead of Room 301.",
             date: '2024-02-18',
             priority: 'medium'
           }
-        ]
+        ],
+        grades: {
+          midTerm: 18,
+          assessments: [
+            { type: 'PPT Presentation', marks: '23/25', date: '2024-01-20' },
+            { type: 'Quiz 1', marks: '8/10', date: '2024-01-25' },
+            { type: 'Quiz 2', marks: '9/10', date: '2024-02-05' }
+          ],
+        }
       }
     }
-    return courses[id] || null
+    return mockCourses[id] || null
   }
 
   const handleLogout = () => {
@@ -166,8 +167,28 @@ function CourseDetails() {
     navigate('/')
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-600 dark:text-gray-300 animate-pulse" role="status" aria-live="polite">
+          Loading course details...
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-red-600 dark:text-red-400" role="alert" aria-live="assertive">
+          {error}
+        </div>
+      </div>
+    )
+  }
+
   if (!user || !course) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+    return null
   }
 
   return (
@@ -182,16 +203,19 @@ function CourseDetails() {
               <button
                 onClick={() => navigate('/student-dashboard')}
                 className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                aria-label="Back to dashboard"
               >
                 ← Back to Dashboard
               </button>
               <img src={logo} alt="AcademixOne Logo" className="h-12 w-auto" />
+              <h1 className="ml-4 text-2xl font-bold text-gray-900 dark:text-white">Student Portal</h1>
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-gray-700 dark:text-gray-300">Welcome, {user.email}</span>
               <button
                 onClick={handleLogout}
                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+                aria-label="Log out"
               >
                 Logout
               </button>
@@ -232,13 +256,14 @@ function CourseDetails() {
       {/* Navigation Tabs */}
       <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
+          <div className="flex space-x-8" role="tablist">
             {[
               { id: 'syllabus', name: 'Syllabus', icon: '📋' },
               { id: 'assignments', name: 'Assignments', icon: '📝' },
               { id: 'resources', name: 'Resources', icon: '📁' },
               { id: 'announcements', name: 'Announcements', icon: '📢' },
-              { id: 'grades', name: 'Grades', icon: '📊' }
+              { id: 'grades', name: 'Grades', icon: '📊' },
+              { id: 'attendance', name: 'Attendance', icon: '📅' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -248,6 +273,9 @@ function CourseDetails() {
                     ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                     : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                aria-controls={`panel-${tab.id}`}
               >
                 <span className="mr-2">{tab.icon}</span>
                 {tab.name}
@@ -260,7 +288,7 @@ function CourseDetails() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'syllabus' && (
-          <div className="space-y-6">
+          <div className="space-y-6" id="panel-syllabus" role="tabpanel">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Course Description</h2>
               <p className="text-gray-700 dark:text-gray-300">{course.description}</p>
@@ -324,9 +352,10 @@ function CourseDetails() {
               </div>
             </div>
           </div>
-        )}        {
-activeTab === 'assignments' && (
-          <div className="space-y-6">
+        )}
+
+        {activeTab === 'assignments' && (
+          <div className="space-y-6" id="panel-assignments" role="tabpanel">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                 <div className="flex items-center">
@@ -387,20 +416,19 @@ activeTab === 'assignments' && (
                       </div>
                     </div>
                     <div className="mt-4 md:mt-0 md:ml-6">
-                      {assignment.grade ? (
+                      {assignment.status === 'submitted' ? (
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-green-600 dark:text-green-400">{assignment.grade}</div>
                           <div className="text-sm text-gray-600 dark:text-gray-400">
                             {assignment.obtainedMarks}/{assignment.maxMarks}
                           </div>
                         </div>
                       ) : assignment.status === 'pending' ? (
-                        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200">
+                        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200" aria-label={`Submit ${assignment.title}`}>
                           Submit Assignment
                         </button>
                       ) : (
-                        <button className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors duration-200">
-                          Start Assignment
+                        <button className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors duration-200" aria-label={`Start ${assignment.title}`}>
+                          Not Started
                         </button>
                       )}
                     </div>
@@ -412,7 +440,7 @@ activeTab === 'assignments' && (
         )}
 
         {activeTab === 'resources' && (
-          <div className="space-y-6">
+          <div className="space-y-6" id="panel-resources" role="tabpanel">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Course Resources</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -436,7 +464,7 @@ activeTab === 'assignments' && (
                       </div>
                     </div>
                     <div className="mt-3">
-                      <button className="w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors duration-200">
+                      <button className="w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors duration-200" aria-label={`Access ${resource.title}`}>
                         {resource.type === 'Link' ? 'Open Link' : 'Download'}
                       </button>
                     </div>
@@ -448,7 +476,7 @@ activeTab === 'assignments' && (
         )}
 
         {activeTab === 'announcements' && (
-          <div className="space-y-6">
+          <div className="space-y-6" id="panel-announcements" role="tabpanel">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Course Announcements</h2>
               <div className="space-y-4">
@@ -483,32 +511,27 @@ activeTab === 'assignments' && (
         )}
 
         {activeTab === 'grades' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="flex items-center">
-                  <div className="text-3xl mr-4">📊</div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Overall Grade</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">A-</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="flex items-center">
-                  <div className="text-3xl mr-4">📈</div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Average Score</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">93.5%</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="flex items-center">
-                  <div className="text-3xl mr-4">🏆</div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Class Rank</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">3/45</p>
+          <div className="space-y-6" id="panel-grades" role="tabpanel">
+            
+
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Assessment Marks</h2>
+              <div className="space-y-6">
+                <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{course.name}</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Mid-Term</p>
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">{course.grades.midTerm}/20</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Continuous Assessments</p>
+                      {course.grades.assessments.map((assessment, idx) => (
+                        <p key={idx} className="text-sm text-gray-900 dark:text-white">
+                          {assessment.type}: {assessment.marks}
+                        </p>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -525,12 +548,11 @@ activeTab === 'assignments' && (
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Assessment</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Score</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Grade</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {course.assignments.filter(a => a.grade).map((assignment) => (
+                    {course.assignments.filter(a => a.obtainedMarks).map((assignment) => (
                       <tr key={assignment.id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                           {assignment.title}
@@ -541,22 +563,66 @@ activeTab === 'assignments' && (
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                           {assignment.obtainedMarks}/{assignment.maxMarks}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            assignment.grade.startsWith('A') ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                            assignment.grade.startsWith('B') ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                            'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                          }`}>
-                            {assignment.grade}
-                          </span>
-                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                           {new Date(assignment.submissionDate).toLocaleDateString()}
                         </td>
                       </tr>
                     ))}
+                    {course.grades.assessments.map((assessment, idx) => (
+                      <tr key={`assessment-${idx}`}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                          {assessment.type}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                          {assessment.type.includes('Quiz') ? 'Quiz' : 'Presentation'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                          {assessment.marks}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                          {new Date(assessment.date).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'attendance' && (
+          <div className="space-y-6" id="panel-attendance" role="tabpanel">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Attendance</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                  <div className="flex items-center">
+                    <div className="text-3xl mr-4">📚</div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Classes</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">20</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                  <div className="flex items-center">
+                    <div className="text-3xl mr-4">✅</div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Classes Attended</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">17</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                  <div className="flex items-center">
+                    <div className="text-3xl mr-4">📊</div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Attendance Percentage</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">85%</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

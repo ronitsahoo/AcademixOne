@@ -51,6 +51,7 @@ function StudentDashboard() {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
               <img src={logo} alt="AcademixOne Logo" className="h-12 w-auto mx-auto" />
+              <h1 className="ml-4 text-2xl font-bold text-gray-900 dark:text-white">Student Portal</h1>
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-gray-700 dark:text-gray-300">Welcome, {user.email}</span>
@@ -103,7 +104,6 @@ function StudentDashboard() {
               {[
                 { title: 'Enrolled Courses', value: '3', color: 'blue', icon: '📚' },
                 { title: 'Pending Assignments', value: '3', color: 'yellow', icon: '📝' },
-                { title: 'Next Class', value: '2:30 PM', color: 'purple', icon: '⏰' }
               ].map((stat) => (
                 <div key={stat.title} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                   <div className="flex items-center">
@@ -122,9 +122,9 @@ function StudentDashboard() {
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Recent Activity</h3>
               <div className="space-y-4">
                 {[
-                  { action: 'Assignment submitted', course: 'Mathematics 101', time: '2 hours ago' },
-                  { action: 'Grade posted', course: 'Physics Lab', time: '1 day ago' },
-                  { action: 'New course material', course: 'Computer Science', time: '2 days ago' }
+                  { action: 'Assignment submitted', course: 'Full Stack Web Development', time: '2 hours ago' },
+                  { action: 'Assignment Graded', course: 'Computer Networks and Security', time: '1 day ago' },
+                  { action: 'New course material', course: 'Data Mining and Business Intelligence', time: '2 days ago' }
                 ].map((activity, index) => (
                   <div key={index} className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
                     <div>
@@ -148,9 +148,9 @@ function StudentDashboard() {
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Enrolled Courses</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[
-                  { name: 'Full Stack Development', instructor: 'Ms. Rupali Kale', progress: 75, semester: 'Fall 2024', department: 'Computer Science', credits: 4 },
-                  { name: 'Data Mining and Business Intelligence', instructor: 'Dr. Ravita Mishra', progress: 60, semester: 'Fall 2024', department: 'Computer Science', credits: 3 },
-                  { name: 'Computer Network and Security', instructor: 'Mr. Abhishek Chaudhari', progress: 90, semester: 'Fall 2024', department: 'Computer Science', credits: 4 }
+                  { name: 'Full Stack Development', instructor: 'Ms. Rupali Kale', progress: 75, semester: 'Semester 5', department: 'Information Technology', credits: 4 },
+                  { name: 'Data Mining and Business Intelligence', instructor: 'Dr. Ravita Mishra', progress: 60, semester: 'Semester 5', department: 'Information Technology', credits: 3 },
+                  { name: 'Computer Network and Security', instructor: 'Mr. Abhishek Chaudhari', progress: 90, semester: 'Semester 5', department: 'Information Technology', credits: 4 }
                 ].map((course) => (
                   <CourseCard
                     key={course.name}
@@ -166,9 +166,9 @@ function StudentDashboard() {
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Available Courses</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[
-                  { name: 'Agile Software Development', instructor: 'Dr.(Mrs.) Shalu Chopra', semester: 'Fall 2024', department: 'Computer Science', credits: 3 },
-                  { name: 'Cloud Computing and Services', instructor: 'Mr. Krishnaji Salgaonkar', semester: 'Fall 2024', department: 'Computer Science', credits: 4 },
-                  { name: 'Solid and Hazardous Waste', instructor: 'Mrs. Anuradha Jadiya', semester: 'Fall 2024', department: 'Computer Science', credits: 2 }
+                  { name: 'Agile Software Development', instructor: 'Dr.(Mrs.) Shalu Chopra', semester: 'Semester 5', department: 'Information Technology', credits: 3 },
+                  { name: 'Cloud Computing and Services', instructor: 'Mr. Krishnaji Salgaonkar', semester: 'Semester 5', department: 'Information Technology', credits: 4 },
+                  { name: 'Solid and Hazardous Waste', instructor: 'Mrs. Anuradha Jadiya', semester: 'Semester 5', department: 'Information Technology', credits: 2 }
                 ].map((course) => (
                   <CourseCard
                     key={course.name}
@@ -193,7 +193,7 @@ function StudentDashboard() {
                   <div className="text-3xl mr-4">📝</div>
                   <div>
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Assignments</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">8</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">4</p>
                   </div>
                 </div>
               </div>
@@ -202,7 +202,7 @@ function StudentDashboard() {
                   <div className="text-3xl mr-4">⏰</div>
                   <div>
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">3</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">2</p>
                   </div>
                 </div>
               </div>
@@ -211,7 +211,7 @@ function StudentDashboard() {
                   <div className="text-3xl mr-4">✅</div>
                   <div>
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Submitted</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">5</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">2</p>
                   </div>
                 </div>
               </div>
@@ -226,17 +226,17 @@ function StudentDashboard() {
                   title: 'REST API Development', 
                   description: 'Create a RESTful API using Node.js and Express with database integration',
                   course: 'Full Stack Development', 
-                  dueDate: '2024-03-10',
+                  dueDate: '2025-08-10',
                   status: 'pending',
-                  maxMarks: 100
+                  maxMarks: 10
                 },
                 { 
                   id: 2,
                   title: 'Data Analysis Report', 
                   description: 'Analyze the provided dataset and create a comprehensive report',
                   course: 'Data Mining and Business Intelligence', 
-                  dueDate: '2024-03-15',
-                  status: 'not_started',
+                  dueDate: '2025-08-15',
+                  status: 'pending',
                   maxMarks: 80
                 }
               ].map((assignment) => (
@@ -261,9 +261,9 @@ function StudentDashboard() {
                   dueDate: '2024-01-20',
                   submissionDate: '2024-01-18',
                   status: 'submitted',
-                  grade: 'A-',
-                  maxMarks: 100,
-                  obtainedMarks: 92
+                  grade: 'O',
+                  maxMarks: 10,
+                  obtainedMarks: 9
                 },
                 { 
                   id: 4,
@@ -274,8 +274,8 @@ function StudentDashboard() {
                   submissionDate: '2024-02-14',
                   status: 'submitted',
                   grade: 'A',
-                  maxMarks: 100,
-                  obtainedMarks: 95
+                  maxMarks: 10,
+                  obtainedMarks: 7
                 }
               ].map((assignment) => (
                 <AssignmentCard

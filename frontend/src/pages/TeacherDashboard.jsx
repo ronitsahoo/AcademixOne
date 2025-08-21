@@ -133,7 +133,6 @@ function TeacherDashboard() {
                 { title: 'Active Courses', value: '4', color: 'blue', icon: '📚' },
                 { title: 'Total Students', value: '120', color: 'green', icon: '👥' },
                 { title: 'Pending Reviews', value: '8', color: 'yellow', icon: '📝' },
-                { title: 'Office Hours', value: '2:00 PM', color: 'purple', icon: '⏰' }
               ].map((stat) => (
                 <div key={stat.title} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                   <div className="flex items-center">
@@ -152,9 +151,9 @@ function TeacherDashboard() {
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Recent Activity</h3>
               <div className="space-y-4">
                 {[
-                  { action: 'Assignment graded', course: 'Mathematics 101', time: '1 hour ago' },
-                  { action: 'New student enrolled', course: 'Physics Lab', time: '3 hours ago' },
-                  { action: 'Course material uploaded', course: 'Computer Science', time: '1 day ago' }
+                  { action: 'Assignment graded', course: 'Full stack Development', time: '1 hour ago' },
+                  { action: 'New student enrolled', course: 'FSD Lab', time: '3 hours ago' },
+                  { action: 'Course material uploaded', course: 'DevOps', time: '1 day ago' }
                 ].map((activity, index) => (
                   <div key={index} className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
                     <div>
@@ -259,10 +258,10 @@ function TeacherDashboard() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
-                { name: 'Full Stack Development', students: 35, progress: 75, semester: 'Fall 2024', department: 'Computer Science', credits: 4 },
-                { name: 'Data Mining and Business Intelligence', students: 28, progress: 60, semester: 'Fall 2024', department: 'Computer Science', credits: 3 },
-                { name: 'Computer Network and Security', students: 42, progress: 90, semester: 'Fall 2024', department: 'Computer Science', credits: 4 },
-                { name: 'Advanced Database Systems', students: 15, progress: 45, semester: 'Fall 2024', department: 'Computer Science', credits: 3 }
+                { name: 'Full Stack Development', students: 35, progress: 75, semester: 'Semester 5', department: 'Information Technology', credits: 4 },
+                { name: 'Data Mining and Business Intelligence', students: 28, progress: 60, semester: 'Semester 5', department: 'Information Technology', credits: 3 },
+                { name: 'Computer Network and Security', students: 42, progress: 90, semester: 'Semester 5', department: 'Information Technology', credits: 4 },
+                { name: 'Advanced Database Systems', students: 15, progress: 45, semester: 'Semester 5', department: 'Information Technology', credits: 3 }
               ].map((course) => (
                 <CourseCard
                   key={course.name}
@@ -284,8 +283,8 @@ function TeacherDashboard() {
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Approval Pending</h3>
               <div className="space-y-3">
                 {[
-                  { name: 'Alex Johnson', course: 'Full Stack Development', requestDate: '2024-01-20' },
-                  { name: 'Maria Garcia', course: 'Data Mining and Business Intelligence', requestDate: '2024-01-19' }
+                  { name: 'Ronit Sahoo', course: 'Full Stack Development', requestDate: '2024-01-20' },
+                  { name: 'Aaryan Shetye', course: 'Data Mining and Business Intelligence', requestDate: '2024-01-19' }
                 ].map((request, index) => (
                   <div key={index} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
                     <div>
@@ -325,22 +324,21 @@ function TeacherDashboard() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Student</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Course</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Attendance</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Grade</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {[
-                      { name: 'John Doe', course: 'Full Stack Development', attendance: '95%', grade: 'A-', status: 'Active' },
-                      { name: 'Jane Smith', course: 'Full Stack Development', attendance: '88%', grade: 'B+', status: 'Active' },
-                      { name: 'Mike Johnson', course: 'Data Mining and Business Intelligence', attendance: '92%', grade: 'A', status: 'Active' },
-                      { name: 'Sarah Wilson', course: 'Computer Network and Security', attendance: '75%', grade: 'C+', status: 'At Risk' }
+                      { name: 'Shrey Pendurkar', course: 'Full Stack Development', attendance: '95%',  status: 'Active' },
+                      { name: 'Harsh Patil', course: 'Full Stack Development', attendance: '88%',  status: 'Active' },
+                      { name: 'Ishaan Khan', course: 'Data Mining and Business Intelligence', attendance: '92%',  status: 'Active' },
+                      { name: 'Shreyas Mahajan', course: 'Computer Network and Security', attendance: '36%', status: 'At Risk' }
                     ].map((student, index) => (
                       <tr key={index}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{student.name}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.course}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.attendance}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.grade}</td>
+
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             student.status === 'Active' 
@@ -504,15 +502,6 @@ function TeacherDashboard() {
                   <div>
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Students</p>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">120</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="flex items-center">
-                  <div className="text-3xl mr-4">✅</div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Average Attendance</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">87%</p>
                   </div>
                 </div>
               </div>

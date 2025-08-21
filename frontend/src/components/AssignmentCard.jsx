@@ -79,9 +79,9 @@ function AssignmentCard({ assignment, userRole, onGrade, onSubmit }) {
           ) : userRole === 'student' && assignment.status === 'not_started' ? (
             <button 
               onClick={() => onSubmit && onSubmit(assignment)}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
             >
-              Start Assignment
+              Submit Assignment
             </button>
           ) : null}
         </div>
