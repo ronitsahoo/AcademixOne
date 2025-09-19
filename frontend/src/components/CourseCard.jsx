@@ -1,21 +1,17 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom';
+import PropTypes from 'prop-types';
 
 function CourseCard({ course, userRole, onJoin, onEdit }) {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const handleClick = () => {
-    if (userRole === 'student') {
-      const courseId = course.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-      navigate(`/course/${courseId}`)
-    } else if (userRole === 'teacher' && onEdit) {
-      onEdit(course)
-    }
-  }
+    navigate(`/course/${course._id}`); // Use ID for backend consistency
+  };
 
   const handleJoinClick = (e) => {
-    e.stopPropagation()
-    if (onJoin) onJoin(course)
-  }
+    e.stopPropagation();
+    if (onJoin) onJoin(course);
+  };
 
   return (
     <div 
@@ -24,7 +20,9 @@ function CourseCard({ course, userRole, onJoin, onEdit }) {
     >
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{course.name}</h3>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-        {userRole === 'student' ? `Instructor: ${course.instructor}` : `${course.students || 0} students enrolled`}
+        {userRole === 'student' ? 
+          `Instructor: ${course.instructor?.profile?.fullName || course.instructor?.profile?.firstName || course.instructor?.email || 'TBD'}` : 
+          `${course.enrolledCount || 0} students enrolled`}
       </p>
       
       {course.progress !== undefined && (
@@ -63,7 +61,32 @@ function CourseCard({ course, userRole, onJoin, onEdit }) {
         </div>
       )}
     </div>
-  )
+  );
 }
 
-export default CourseCard
+CourseCard.propTypes = {
+  course: PropTypes.shape({
+    _id: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    semester: PropTypes.string,
+    department: PropTypes.string,
+    credits: PropTypes.number,
+    progress: PropTypes.number,
+    enrolledCount: PropTypes.number,
+    instructor: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.shape({
+        profile: PropTypes.shape({
+          fullName: PropTypes.string,
+          firstName: PropTypes.string,
+          email: PropTypes.string,
+        }),
+      }),
+    ]),
+  }).isRequired,
+  userRole: PropTypes.oneOf(['student', 'teacher', 'admin']).isRequired,
+  onJoin: PropTypes.func,
+  onEdit: PropTypes.func,
+};
+
+export default CourseCard;

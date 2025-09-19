@@ -1,90 +1,234 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import ThemeToggle from '../components/ThemeToggle'
-import CourseCard from '../components/CourseCard'
-import AssignmentCard from '../components/AssignmentCard'
-import AttendanceTable from '../components/AttendanceTable'
-import logo from '../assets/logo.png'
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import PropTypes from 'prop-types';
+import ThemeToggle from '../components/ThemeToggle';
+import CourseCard from '../components/CourseCard';
+
+import AttendanceTable from '../components/AttendanceTable';
+
+import apiService from '../services/api';
+import logo from '../assets/logo.png';
 
 function TeacherDashboard() {
-  const navigate = useNavigate()
-  const [user, setUser] = useState(null)
-  const [activeTab, setActiveTab] = useState('overview')
-  const [showCreateCourse, setShowCreateCourse] = useState(false)
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [showCreateCourse, setShowCreateCourse] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const [error, setError] = useState(null);
   const [newCourse, setNewCourse] = useState({
     name: '',
+    code: '',
+    description: '',
     department: '',
     semester: '',
-    credits: ''
-  })
+    credits: '',
+    maxStudents: '',
+    startDate: '',
+    endDate: '',
+  });
+  const [courses, setCourses] = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [students, setStudents] = useState([]);
+
+  // Define departments as a constant for maintainability
+  const DEPARTMENTS = [
+    'Information Technology',
+    'Computer Science',
+    'Electronics',
+    'Mechanical',
+    'Civil',
+    'Electrical',
+  ];
+
+  // Memoize loadDashboardData to prevent redefinition
+  const loadDashboardData = useCallback(async () => {
+    let isMounted = true; // Prevent memory leaks
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Use existing user data from localStorage to avoid redundant API call
+      const userData = JSON.parse(localStorage.getItem('user'));
+      if (!userData || userData.role !== 'teacher') {
+        throw new Error('Invalid user or role');
+      }
+      setUser(userData);
+
+      // Load courses taught by this teacher
+      const coursesResponse = await apiService.getCourses({ instructor: userData._id });
+      if (isMounted) {
+        setCourses(coursesResponse.courses || []);
+      }
+
+      // Load assignments for teacher's courses
+      const assignmentsResponse = await apiService.getAssignments({ role: 'teacher' });
+      if (isMounted) {
+        setAssignments(assignmentsResponse.assignments || []);
+      }
+
+      // Load students from teacher's courses
+      let allStudents = [];
+      for (const course of coursesResponse.courses || []) {
+        try {
+          const studentsResponse = await apiService.getCourseStudents(course._id);
+          allStudents = [...allStudents, ...studentsResponse.students];
+        } catch (error) {
+          console.error(`Error loading students for course ${course._id}:`, error);
+        }
+      }
+      if (isMounted) {
+        // Remove duplicates by student ID
+        const uniqueStudents = allStudents.filter(
+          (student, index, self) => index === self.findIndex((s) => s._id === student._id)
+        );
+        setStudents(uniqueStudents);
+      }
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      if (isMounted) {
+        setError('Failed to load dashboard data. Please try again.');
+      }
+    } finally {
+      if (isMounted) {
+        setLoading(false);
+      }
+    }
+
+    return () => {
+      isMounted = false; // Cleanup on unmount
+    };
+  }, []);
 
   useEffect(() => {
-    const userData = JSON.parse(localStorage.getItem('user'))
-    if (userData && userData.role === 'teacher') {
-      setUser(userData)
-    } else {
-      navigate('/')
-    }
-  }, [])
+    loadDashboardData();
+  }, [loadDashboardData]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('user')
-    localStorage.removeItem('isAuthenticated')
-    navigate('/')
-  }
-
-  const handleCreateCourse = (e) => {
-    e.preventDefault()
-    // Save course to localStorage (in real app, send to API)
-    const courses = JSON.parse(localStorage.getItem('teacherCourses') || '[]')
-    const courseData = {
-      ...newCourse,
-      id: Date.now().toString(),
-      teacherId: user.id,
-      students: 0,
-      progress: 0,
-      createdAt: new Date().toISOString()
+  const handleLogout = async () => {
+    try {
+      await apiService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('user');
+      localStorage.removeItem('isAuthenticated');
+      navigate('/');
     }
-    courses.push(courseData)
-    localStorage.setItem('teacherCourses', JSON.stringify(courses))
-    
-    // Reset form
-    setNewCourse({ name: '', department: '', semester: '', credits: '' })
-    setShowCreateCourse(false)
-    alert('Course created successfully!')
-  }
+  };
+
+  const handleCreateCourse = async (e) => {
+    e.preventDefault();
+    setError(null);
+    try {
+      // Validate required fields
+      if (!newCourse.name || !newCourse.code || !newCourse.department || !newCourse.semester) {
+        throw new Error('Please fill in all required fields');
+      }
+      
+      const credits = parseInt(newCourse.credits);
+      const maxStudents = parseInt(newCourse.maxStudents) || 50;
+
+      // Validate inputs
+      if (isNaN(credits) || credits < 1 || credits > 10) {
+        throw new Error('Credits must be between 1 and 10');
+      }
+      if (isNaN(maxStudents) || maxStudents < 1 || maxStudents > 500) {
+        throw new Error('Max students must be between 1 and 500');
+      }
+      if (!newCourse.startDate || !newCourse.endDate) {
+        throw new Error('Please provide both start and end dates');
+      }
+      if (new Date(newCourse.startDate) >= new Date(newCourse.endDate)) {
+        throw new Error('End date must be after start date');
+      }
+
+      const courseData = {
+        ...newCourse,
+        credits,
+        maxStudents,
+      };
+      console.log('Creating course with data:', courseData);
+      const response = await apiService.createCourse(courseData);
+
+      // Reset form
+      setNewCourse({
+        name: '',
+        code: '',
+        description: '',
+        department: '',
+        semester: '',
+        credits: '',
+        maxStudents: '',
+        startDate: '',
+        endDate: '',
+      });
+      setShowCreateCourse(false);
+      alert('Course created successfully!');
+      loadDashboardData(); // Reload data
+    } catch (error) {
+      console.error('Error creating course:', error);
+      setError(error.message || 'Failed to create course');
+    }
+  };
 
   const handleEditCourse = (course) => {
-    // Navigate to course edit page (would be implemented)
-    console.log('Edit course:', course.name)
-  }
+    navigate(`/teacher-course/${course._id}`);
+  };
 
-  const handleApproveStudent = (studentId, courseId) => {
-    // Handle student approval logic
-    console.log('Approve student:', studentId, 'for course:', courseId)
-  }
+  const handleApproveStudent = async (studentId, courseId) => {
+    try {
+      await apiService.approveStudent(courseId, studentId);
+      alert('Student approved successfully!');
+      loadDashboardData(); // Refresh data
+    } catch (error) {
+      console.error('Error approving student:', error);
+      setError(error.message || 'Failed to approve student');
+    }
+  };
 
-  if (!user) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  const handleInputChange = (e) => {
+    setNewCourse({
+      ...newCourse,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-slate-50 dark:from-gray-900 dark:via-gray-800 dark:to-slate-900">
+        <div className="text-center">
+          <div
+            className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"
+            role="status"
+          >
+            <span className="sr-only">Loading...</span>
+          </div>
+          <p className="text-gray-600 dark:text-gray-400">Loading dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-slate-50 dark:from-gray-900 dark:via-gray-800 dark:to-slate-900 transition-colors duration-300">
       <ThemeToggle />
-      
+
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
-              <img src={logo} alt="AcademixOne Logo" className="h-12 w-auto mx-auto" />
+              <img src={logo} alt="AcademixOne Logo" className="h-12 w-auto" />
               <h1 className="ml-4 text-2xl font-bold text-gray-900 dark:text-white">Faculty Portal</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-gray-700 dark:text-gray-300">Welcome, {user.email}</span>
+              <span className="text-gray-700 dark:text-gray-300">Welcome, {user?.email || 'Teacher'}</span>
+
               <button
                 onClick={handleLogout}
                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+                aria-label="Logout"
               >
                 Logout
               </button>
@@ -102,7 +246,7 @@ function TeacherDashboard() {
               { id: 'courses', name: 'My Courses', icon: '📚' },
               { id: 'students', name: 'Students', icon: '👥' },
               { id: 'assignments', name: 'Assignments', icon: '📝' },
-              { id: 'attendance', name: 'Attendance', icon: '📅' }
+              { id: 'attendance', name: 'Attendance', icon: '📅' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -112,8 +256,11 @@ function TeacherDashboard() {
                     ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                     : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
+                aria-current={activeTab === tab.id ? 'page' : undefined}
               >
-                <span className="mr-2">{tab.icon}</span>
+                <span className="mr-2" aria-hidden="true">
+                  {tab.icon}
+                </span>
                 {tab.name}
               </button>
             ))}
@@ -123,230 +270,341 @@ function TeacherDashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {error && (
+          <div
+            className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6"
+            role="alert"
+          >
+            <span className="block sm:inline">{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="absolute top-0 bottom-0 right-0 px-4 py-3"
+              aria-label="Close error message"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard Overview</h2>
-            
+
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                { title: 'Active Courses', value: '4', color: 'blue', icon: '📚' },
-                { title: 'Total Students', value: '120', color: 'green', icon: '👥' },
-                { title: 'Pending Reviews', value: '8', color: 'yellow', icon: '📝' },
-              ].map((stat) => (
-                <div key={stat.title} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                  <div className="flex items-center">
-                    <div className="text-3xl mr-4">{stat.icon}</div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{stat.title}</p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
-                    </div>
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div className="flex items-center">
+                  <div className="text-3xl mr-4" aria-hidden="true">
+                    📚
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Courses</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{courses.length}</p>
                   </div>
                 </div>
-              ))}
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div className="flex items-center">
+                  <div className="text-3xl mr-4" aria-hidden="true">
+                    👥
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Students</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{students.length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div className="flex items-center">
+                  <div className="text-3xl mr-4" aria-hidden="true">
+                    📝
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending Assignments</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {assignments.filter((a) => new Date(a.dueDate) >= new Date()).length}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div className="flex items-center">
+                  <div className="text-3xl mr-4" aria-hidden="true">
+                    📅
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Courses in Progress</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {courses.filter((c) => new Date(c.endDate) >= new Date()).length}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Recent Activity */}
+            {/* Quick Actions */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Recent Activity</h3>
-              <div className="space-y-4">
-                {[
-                  { action: 'Assignment graded', course: 'Full stack Development', time: '1 hour ago' },
-                  { action: 'New student enrolled', course: 'FSD Lab', time: '3 hours ago' },
-                  { action: 'Course material uploaded', course: 'DevOps', time: '1 day ago' }
-                ].map((activity, index) => (
-                  <div key={index} className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-white">{activity.action}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{activity.course}</p>
-                    </div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">{activity.time}</span>
-                  </div>
-                ))}
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
+              <div className="flex space-x-4">
+                <button
+                  onClick={() => setActiveTab('courses')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+                  aria-label="Create new course"
+                >
+                  Create New Course
+                </button>
+                <button
+                  onClick={() => navigate('/attendance')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+                  aria-label="Mark attendance"
+                >
+                  Mark Attendance
+                </button>
               </div>
             </div>
           </div>
         )}
 
+        {/* My Courses Tab */}
         {activeTab === 'courses' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white">My Courses</h2>
               <button
                 onClick={() => setShowCreateCourse(true)}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+                aria-label="Create new course"
               >
-                + Create Course
+                Create Course
               </button>
             </div>
 
-            {/* Create Course Modal */}
+            {/* Create Course Form */}
             {showCreateCourse && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4">
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Create New Course</h3>
-                  <form onSubmit={handleCreateCourse} className="space-y-4">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Create New Course</h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Course Name
                       </label>
                       <input
-                        type="text"
-                        required
+                        name="name"
                         value={newCourse.name}
-                        onChange={(e) => setNewCourse({...newCourse, name: e.target.value})}
+                        onChange={handleInputChange}
+                        placeholder="Course Name"
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Department
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Course Code
                       </label>
                       <input
-                        type="text"
-                        required
-                        value={newCourse.department}
-                        onChange={(e) => setNewCourse({...newCourse, department: e.target.value})}
+                        name="code"
+                        value={newCourse.code}
+                        onChange={handleInputChange}
+                        placeholder="Course Code"
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        required
                       />
                     </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      name="description"
+                      value={newCourse.description}
+                      onChange={handleInputChange}
+                      placeholder="Course description"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      rows="3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Department
+                      </label>
+                      <select
+                        name="department"
+                        value={newCourse.department}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      >
+                        <option value="">Select Department</option>
+                        {DEPARTMENTS.map((dept) => (
+                          <option key={dept} value={dept}>
+                            {dept}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Semester
                       </label>
                       <input
-                        type="text"
-                        required
+                        name="semester"
                         value={newCourse.semester}
-                        onChange={(e) => setNewCourse({...newCourse, semester: e.target.value})}
+                        onChange={handleInputChange}
+                        placeholder="Semester"
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Credits
                       </label>
                       <input
+                        name="credits"
                         type="number"
-                        required
                         min="1"
-                        max="6"
+                        max="10"
                         value={newCourse.credits}
-                        onChange={(e) => setNewCourse({...newCourse, credits: e.target.value})}
+                        onChange={handleInputChange}
+                        placeholder="Credits"
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       />
                     </div>
-                    <div className="flex space-x-3 pt-4">
-                      <button
-                        type="submit"
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors duration-200"
-                      >
-                        Create Course
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowCreateCourse(false)}
-                        className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg transition-colors duration-200"
-                      >
-                        Cancel
-                      </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Max Students
+                      </label>
+                      <input
+                        name="maxStudents"
+                        type="number"
+                        min="1"
+                        max="500"
+                        value={newCourse.maxStudents}
+                        onChange={handleInputChange}
+                        placeholder="Max Students"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
                     </div>
-                  </form>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Start Date
+                      </label>
+                      <input
+                        name="startDate"
+                        type="date"
+                        value={newCourse.startDate}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        End Date
+                      </label>
+                      <input
+                        name="endDate"
+                        type="date"
+                        value={newCourse.endDate}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex space-x-4">
+                    <button
+                      onClick={handleCreateCourse}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+                    >
+                      Create Course
+                    </button>
+                    <button
+                      onClick={() => setShowCreateCourse(false)}
+                      className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
 
+            {/* Courses List */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[
-                { name: 'Full Stack Development', students: 35, progress: 75, semester: 'Semester 5', department: 'Information Technology', credits: 4 },
-                { name: 'Data Mining and Business Intelligence', students: 28, progress: 60, semester: 'Semester 5', department: 'Information Technology', credits: 3 },
-                { name: 'Computer Network and Security', students: 42, progress: 90, semester: 'Semester 5', department: 'Information Technology', credits: 4 },
-                { name: 'Advanced Database Systems', students: 15, progress: 45, semester: 'Semester 5', department: 'Information Technology', credits: 3 }
-              ].map((course) => (
+              {courses.map((course) => (
                 <CourseCard
-                  key={course.name}
+                  key={course._id}
                   course={course}
                   userRole="teacher"
-                  onEdit={handleEditCourse}
+                  onEdit={() => handleEditCourse(course)}
                 />
               ))}
             </div>
           </div>
         )}
 
+        {/* Students Tab */}
         {activeTab === 'students' && (
           <div className="space-y-6">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Student Management</h2>
-            
-            {/* Approval Pending Section */}
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Students</h2>
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Approval Pending</h3>
-              <div className="space-y-3">
-                {[
-                  { name: 'Ronit Sahoo', course: 'Full Stack Development', requestDate: '2024-01-20' },
-                  { name: 'Aaryan Shetye', course: 'Data Mining and Business Intelligence', requestDate: '2024-01-19' }
-                ].map((request, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-white">{request.name}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Requested to join: {request.course}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Request date: {new Date(request.requestDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleApproveStudent(request.name, request.course)}
-                        className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm transition-colors duration-200"
-                      >
-                        Approve
-                      </button>
-                      <button className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-colors duration-200">
-                        Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Student List by Course */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="p-6">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Students by Course</h3>
-              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Enrolled Students</h3>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-gray-700">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Student</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Course</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Attendance</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Course
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {[
-                      { name: 'Shrey Pendurkar', course: 'Full Stack Development', attendance: '95%',  status: 'Active' },
-                      { name: 'Harsh Patil', course: 'Full Stack Development', attendance: '88%',  status: 'Active' },
-                      { name: 'Ishaan Khan', course: 'Data Mining and Business Intelligence', attendance: '92%',  status: 'Active' },
-                      { name: 'Shreyas Mahajan', course: 'Computer Network and Security', attendance: '36%', status: 'At Risk' }
-                    ].map((student, index) => (
-                      <tr key={index}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{student.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.course}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{student.attendance}</td>
-
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            student.status === 'Active' 
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                          }`}>
-                            {student.status}
-                          </span>
+                    {students.map((student) => (
+                      <tr key={student._id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          {student.profile?.firstName} {student.profile?.lastName}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          {student.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          {courses.find((c) => c.students?.includes(student._id))?.name || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {courses.find((c) => c.students?.includes(student._id) && !c.approvedStudents?.includes(student._id)) ? (
+                            <button
+                              onClick={() =>
+                                handleApproveStudent(
+                                  student._id,
+                                  courses.find((c) => c.students?.includes(student._id))?._id
+                                )
+                              }
+                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+                            >
+                              Approve
+                            </button>
+                          ) : (
+                            <span className="text-green-600 dark:text-green-400">Approved</span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -357,217 +615,95 @@ function TeacherDashboard() {
           </div>
         )}
 
+        {/* Assignments Tab */}
         {activeTab === 'assignments' && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Assignment Management</h2>
-              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors duration-200">
-                + Create Assignment
-              </button>
-            </div>
-            
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="flex items-center">
-                  <div className="text-3xl mr-4">📝</div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Assignments</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">12</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="flex items-center">
-                  <div className="text-3xl mr-4">⏰</div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">8</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="flex items-center">
-                  <div className="text-3xl mr-4">📊</div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending Grading</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">15</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="flex items-center">
-                  <div className="text-3xl mr-4">✅</div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Graded</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">45</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Assignment Cards */}
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Assignments</h2>
             <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Recent Assignments</h3>
-              {[
-                { 
-                  id: 1,
-                  title: 'REST API Development', 
-                  description: 'Create a RESTful API using Node.js and Express with database integration',
-                  course: 'Full Stack Development', 
-                  dueDate: '2024-03-10',
-                  status: 'submitted',
-                  maxMarks: 100,
-                  submissions: '28/35'
-                },
-                { 
-                  id: 2,
-                  title: 'Data Analysis Report', 
-                  description: 'Analyze the provided dataset and create a comprehensive report',
-                  course: 'Data Mining and Business Intelligence', 
-                  dueDate: '2024-03-15',
-                  status: 'submitted',
-                  maxMarks: 80,
-                  submissions: '22/28'
-                },
-                { 
-                  id: 3,
-                  title: 'Network Security Assessment', 
-                  description: 'Conduct a security assessment of the given network infrastructure',
-                  course: 'Computer Network and Security', 
-                  dueDate: '2024-03-20',
-                  status: 'pending',
-                  maxMarks: 120,
-                  submissions: '15/42'
-                }
-              ].map((assignment) => (
-                <div key={assignment.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+              {assignments.map((assignment) => (
+                <div key={assignment._id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                  <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{assignment.title}</h3>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          assignment.status === 'submitted' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                          'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                        }`}>
-                          {assignment.status === 'submitted' ? '📊 Needs Grading' : '⏰ Active'}
-                        </span>
-                      </div>
-                      
-                      <p className="text-gray-600 dark:text-gray-400 mb-2">{assignment.description}</p>
-                      
-                      <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{assignment.title}</h3>
+                      <p className="text-gray-600 dark:text-gray-400 mt-1">{assignment.description}</p>
+                      <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mt-2">
                         <span>📅 Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
-                        <span>📊 Max Marks: {assignment.maxMarks}</span>
-                        <span>📚 {assignment.course}</span>
-                        <span>📤 Submissions: {assignment.submissions}</span>
+                        <span>📊 Max Score: {assignment.maxScore}</span>
+                        {assignment.course && <span>📚 {assignment.course.name || assignment.course}</span>}
                       </div>
                     </div>
-                    
-                    <div className="mt-4 md:mt-0 md:ml-6">
-                      {assignment.status === 'submitted' ? (
-                        <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors duration-200">
-                          Grade Submissions
-                        </button>
-                      ) : (
-                        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200">
-                          Manage Assignment
-                        </button>
-                      )}
+                    <div className="flex items-center space-x-2 ml-4">
+                      <button
+                        onClick={() => navigate(`/teacher-course/${assignment.course._id || assignment.course}`)}
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 text-sm"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (confirm('Are you sure you want to delete this assignment?')) {
+                            try {
+                              await apiService.deleteAssignment(assignment._id);
+                              setAssignments(prev => prev.filter(a => a._id !== assignment._id));
+                            } catch (error) {
+                              setError(error.message || 'Failed to delete assignment');
+                            }
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200 text-sm"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        onClick={() => navigate(`/teacher-course/${assignment.course._id || assignment.course}/assignment/${assignment._id}/grade`)}
+                        className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"
+                      >
+                        Grade
+                      </button>
                     </div>
                   </div>
                 </div>
               ))}
+              {assignments.length === 0 && (
+                <p className="text-gray-600 dark:text-gray-400">No assignments found.</p>
+              )}
             </div>
           </div>
         )}
 
+        {/* Attendance Tab */}
         {activeTab === 'attendance' && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Attendance Management</h2>
-              <button
-                onClick={() => navigate('/attendance')}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-              >
-                Mark Attendance
-              </button>
-            </div>
-            
-            {/* Attendance Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="flex items-center">
-                  <div className="text-3xl mr-4">📚</div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Students</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">120</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="flex items-center">
-                  <div className="text-3xl mr-4">⚠️</div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Low Attendance</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">8</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="flex items-center">
-                  <div className="text-3xl mr-4">📅</div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Classes Today</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">3</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Attendance Overview */}
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Attendance</h2>
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Recent Attendance Overview</h3>
-              <div className="space-y-4">
-                {[
-                  { course: 'Full Stack Development', date: '2024-01-25', present: 32, total: 35, percentage: 91 },
-                  { course: 'Data Mining and Business Intelligence', date: '2024-01-24', present: 25, total: 28, percentage: 89 },
-                  { course: 'Computer Network and Security', date: '2024-01-23', present: 38, total: 42, percentage: 90 }
-                ].map((record, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                    <div>
-                      <h4 className="font-semibold text-gray-900 dark:text-white">{record.course}</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {new Date(record.date).toLocaleDateString()} • {record.present}/{record.total} students present
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <div className={`text-lg font-bold ${
-                        record.percentage >= 85 ? 'text-green-600 dark:text-green-400' :
-                        record.percentage >= 75 ? 'text-yellow-600 dark:text-yellow-400' :
-                        'text-red-600 dark:text-red-400'
-                      }`}>
-                        {record.percentage}%
-                      </div>
-                      <div className="w-20 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-1">
-                        <div 
-                          className={`h-2 rounded-full ${
-                            record.percentage >= 85 ? 'bg-green-600' :
-                            record.percentage >= 75 ? 'bg-yellow-600' : 'bg-red-600'
-                          }`}
-                          style={{ width: `${record.percentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Course Attendance</h3>
+              <AttendanceTable
+                coursesOrStudents={courses}
+                userRole="teacher"
+                onMarkAttendance={async (courseId, studentId, status) => {
+                  try {
+                    await apiService.markAttendance(courseId, studentId, status);
+                    alert('Attendance updated successfully!');
+                    loadDashboardData();
+                  } catch (error) {
+                    setError(error.message || 'Failed to update attendance');
+                  }
+                }}
+                attendanceSummary={{}} // Adjust based on actual data structure
+              />
             </div>
           </div>
         )}
+
+
       </main>
     </div>
-  )
+  );
 }
 
-export default TeacherDashboard 
+TeacherDashboard.propTypes = {
+  navigate: PropTypes.func,
+  user: PropTypes.object,
+};
+
+export default TeacherDashboard;

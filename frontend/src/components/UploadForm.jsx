@@ -1,73 +1,83 @@
-import { useState } from 'react'
+import { useState } from 'react';
+import PropTypes from 'prop-types';
+import apiService from '../services/api'; // Assume this handles API calls with auth
 
-function UploadForm({ onUpload, acceptedTypes = ".pdf,.doc,.docx,.ppt,.pptx,.txt", maxSize = 10 }) {
-  const [dragActive, setDragActive] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [uploadedFiles, setUploadedFiles] = useState([])
+function UploadForm({ onUpload, acceptedTypes = ".pdf,.doc,.docx,.ppt,.pptx,.txt", maxSize = 10, category = 'assignment' }) {
+  const [dragActive, setDragActive] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
   const handleDrag = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
+    e.preventDefault();
+    e.stopPropagation();
     if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true)
+      setDragActive(true);
     } else if (e.type === "dragleave") {
-      setDragActive(false)
+      setDragActive(false);
     }
-  }
+  };
 
   const handleDrop = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFiles(e.dataTransfer.files)
+      handleFiles(e.dataTransfer.files);
     }
-  }
+  };
 
   const handleChange = (e) => {
-    e.preventDefault()
+    e.preventDefault();
     if (e.target.files && e.target.files[0]) {
-      handleFiles(e.target.files)
+      handleFiles(e.target.files);
     }
-  }
+  };
 
   const handleFiles = async (files) => {
-    setUploading(true)
-    const fileArray = Array.from(files)
+    setUploading(true);
+    const fileArray = Array.from(files);
+    const formData = new FormData();
     
     for (const file of fileArray) {
       // Validate file size
       if (file.size > maxSize * 1024 * 1024) {
-        alert(`File ${file.name} is too large. Maximum size is ${maxSize}MB.`)
-        continue
+        alert(`File ${file.name} is too large. Maximum size is ${maxSize}MB.`);
+        continue;
       }
+      formData.append('files', file);
+    }
 
-      // Simulate upload process
-      await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      const response = await apiService.post(`/upload/${category}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       
-      const uploadedFile = {
-        id: Date.now() + Math.random(),
-        name: file.name,
+      const newFiles = response.data.files.map((file, index) => ({
+        id: Date.now() + index,
+        name: file.originalName,
         size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
-        type: file.type,
+        type: file.mimetype,
         uploadDate: new Date().toISOString(),
-        url: URL.createObjectURL(file) // In real app, this would be the server URL
-      }
+        url: file.path, // Backend returns /uploads/... path
+      }));
       
-      setUploadedFiles(prev => [...prev, uploadedFile])
+      setUploadedFiles(prev => [...prev, ...newFiles]);
       
       if (onUpload) {
-        onUpload(uploadedFile)
+        onUpload(newFiles);
       }
+    } catch (error) {
+      console.error('Upload failed:', error);
+      alert('Upload failed: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setUploading(false);
     }
-    
-    setUploading(false)
-  }
+  };
 
   const removeFile = (fileId) => {
-    setUploadedFiles(prev => prev.filter(file => file.id !== fileId))
-  }
+    setUploadedFiles(prev => prev.filter(file => file.id !== fileId));
+  };
 
   return (
     <div className="space-y-4">
@@ -132,18 +142,35 @@ function UploadForm({ onUpload, acceptedTypes = ".pdf,.doc,.docx,.ppt,.pptx,.txt
                   <div className="text-xs text-gray-600 dark:text-gray-400">{file.size}</div>
                 </div>
               </div>
-              <button
-                onClick={() => removeFile(file.id)}
-                className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-              >
-                ✕
-              </button>
+              <div className="flex items-center space-x-2">
+                <a
+                  href={file.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 text-sm"
+                >
+                  View
+                </a>
+                <button
+                  onClick={() => removeFile(file.id)}
+                  className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
           ))}
         </div>
       )}
     </div>
-  )
+  );
 }
 
-export default UploadForm
+UploadForm.propTypes = {
+  onUpload: PropTypes.func,
+  acceptedTypes: PropTypes.string,
+  maxSize: PropTypes.number,
+  category: PropTypes.oneOf(['assignment', 'resource', 'avatar']),
+};
+
+export default UploadForm;

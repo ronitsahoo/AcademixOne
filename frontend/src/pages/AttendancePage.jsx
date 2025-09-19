@@ -1,138 +1,161 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import ThemeToggle from '../components/ThemeToggle'
-import AttendanceTable from '../components/AttendanceTable'
-import logo from '../assets/logo.png'
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import PropTypes from 'prop-types';
+import ThemeToggle from '../components/ThemeToggle';
+import AttendanceTable from '../components/AttendanceTable';
+import apiService from '../services/api';
+import logo from '../assets/logo.png';
 
 function AttendancePage() {
-  const navigate = useNavigate()
-  const [user, setUser] = useState(null)
-  const [selectedCourse, setSelectedCourse] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
-  const [lectureCount, setLectureCount] = useState(1)
-  const [students, setStudents] = useState([])
-  const [attendance, setAttendance] = useState({})
-  const [courses, setCourses] = useState([])
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [selectedCourse, setSelectedCourse] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [lectureCount, setLectureCount] = useState(1);
+  const [coursesOrStudents, setCoursesOrStudents] = useState([]);
+  const [attendanceSummary, setAttendanceSummary] = useState({});
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const userData = JSON.parse(localStorage.getItem('user'))
+    const userData = JSON.parse(localStorage.getItem('user'));
     if (userData) {
-      setUser(userData)
-      loadCourses(userData)
+      setUser(userData);
+      loadCourses(userData);
     } else {
-      navigate('/')
+      navigate('/');
     }
-  }, [navigate])
+  }, [navigate]);
 
-  const loadCourses = (userData) => {
-    // Mock courses data - in real app, fetch from API
-    const mockCourses = [
-      {
-        id: 'fsd',
-        name: 'Full Stack Development',
-        students: [
-          { id: '1', name: 'John Doe', rollNumber: 'CS001', attendanceRecord: [
-            { date: '2024-01-15', present: true },
-            { date: '2024-01-17', present: true },
-            { date: '2024-01-19', present: false }
-          ]},
-          { id: '2', name: 'Jane Smith', rollNumber: 'CS002', attendanceRecord: [
-            { date: '2024-01-15', present: true },
-            { date: '2024-01-17', present: false },
-            { date: '2024-01-19', present: true }
-          ]},
-          { id: '3', name: 'Mike Johnson', rollNumber: 'CS003', attendanceRecord: [
-            { date: '2024-01-15', present: false },
-            { date: '2024-01-17', present: true },
-            { date: '2024-01-19', present: true }
-          ]}
-        ]
-      },
-      {
-        id: 'dmbi',
-        name: 'Data Mining and Business Intelligence',
-        students: [
-          { id: '4', name: 'Sarah Wilson', rollNumber: 'CS004', attendanceRecord: [
-            { date: '2024-01-16', present: true },
-            { date: '2024-01-18', present: true }
-          ]},
-          { id: '5', name: 'Tom Brown', rollNumber: 'CS005', attendanceRecord: [
-            { date: '2024-01-16', present: false },
-            { date: '2024-01-18', present: true }
-          ]}
-        ]
+  const loadCourses = async (userData) => {
+    try {
+      setLoading(true);
+      setError(null);
+      if (userData.role === 'teacher') {
+        const response = await apiService.getCourses({ role: 'teacher' });
+        setCourses(response.courses || []);
+      } else {
+        const response = await apiService.getUserCourses(userData.id);
+        const studentCourses = response.courses.map(course => ({
+          id: course._id,
+          name: course.name,
+          attendanceSummary: course.attendanceSummary || {
+            presentCount: 0,
+            lateCount: 0,
+            absentCount: 0,
+            totalClasses: 0,
+          },
+        }));
+        setCourses(studentCourses);
+        setCoursesOrStudents(studentCourses);
       }
-    ]
-
-    if (userData.role === 'teacher') {
-      setCourses(mockCourses)
-    } else {
-      // For students, show their enrolled courses with attendance data
-      const studentCourses = mockCourses.map(course => ({
-        id: course.id,
-        name: course.name,
-        attendanceRecord: course.students.find(s => s.id === userData.id)?.attendanceRecord || []
-      }))
-      setCourses(studentCourses)
+    } catch (err) {
+      setError(err.message || 'Failed to load courses');
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
-  const handleCourseChange = (courseId) => {
-    setSelectedCourse(courseId)
-    const course = courses.find(c => c.id === courseId)
-    if (course && course.students) {
-      setStudents(course.students)
-      // Initialize attendance state
-      const initialAttendance = {}
-      course.students.forEach(student => {
-        initialAttendance[student.id] = true // Default to present
-      })
-      setAttendance(initialAttendance)
+  const handleCourseChange = async (courseId) => {
+    setSelectedCourse(courseId);
+    if (user.role === 'teacher') {
+      try {
+        setLoading(true);
+        const response = await apiService.getCourseStudents(courseId);
+        const studentsWithSummary = response.students.map(student => ({
+          ...student,
+          attendanceSummary: student.attendanceSummary || {
+            presentCount: 0,
+            lateCount: 0,
+            totalClasses: 0,
+          },
+        }));
+        setCoursesOrStudents(studentsWithSummary);
+        const initialAttendance = {};
+        studentsWithSummary.forEach(student => {
+          initialAttendance[student.id] = 'present';
+        });
+        setAttendanceSummary(initialAttendance);
+      } catch (err) {
+        setError(err.message || 'Failed to load students');
+      } finally {
+        setLoading(false);
+      }
     }
-  }
+  };
 
-  const handleAttendanceChange = (studentId, isPresent) => {
-    setAttendance(prev => ({
+  const handleAttendanceChange = async (studentId, status) => {
+    setAttendanceSummary(prev => ({
       ...prev,
-      [studentId]: isPresent
-    }))
-  }
+      [studentId]: status,
+    }));
+  };
 
-  const handleSaveAttendance = () => {
-    if (!selectedCourse || students.length === 0) {
-      alert('Please select a course and ensure students are loaded.')
-      return
+  const handleSaveAttendance = async () => {
+    if (!selectedCourse || coursesOrStudents.length === 0) {
+      alert('Please select a course and ensure students are loaded.');
+      return;
     }
 
-    // Save attendance to localStorage (in real app, send to API)
-    const attendanceRecord = {
-      courseId: selectedCourse,
-      date: date,
-      lectureCount: lectureCount,
-      attendance: attendance,
-      timestamp: new Date().toISOString()
+    try {
+      setLoading(true);
+      const attendanceData = {
+        courseId: selectedCourse,
+        date,
+        lectureCount,
+        attendance: Object.entries(attendanceSummary).map(([studentId, status]) => ({
+          studentId,
+          status,
+        })),
+      };
+      await apiService.createAttendanceSession(attendanceData);
+      alert('Attendance saved successfully!');
+      setAttendanceSummary({});
+      setSelectedCourse('');
+      setCoursesOrStudents([]);
+    } catch (err) {
+      setError(err.message || 'Failed to save attendance');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const existingRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]')
-    existingRecords.push(attendanceRecord)
-    localStorage.setItem('attendanceRecords', JSON.stringify(existingRecords))
+  const handleLogout = async () => {
+    try {
+      await apiService.logout();
+    } finally {
+      localStorage.removeItem('user');
+      localStorage.removeItem('isAuthenticated');
+      navigate('/');
+    }
+  };
 
-    alert('Attendance saved successfully!')
-    
-    // Reset form
-    setAttendance({})
-    setSelectedCourse('')
-    setStudents([])
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('user')
-    localStorage.removeItem('isAuthenticated')
-    navigate('/')
-  }
-
-  if (!user) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 dark:text-red-400">{error}</p>
+          <button
+            onClick={() => loadCourses(user)}
+            className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -187,7 +210,7 @@ function AttendancePage() {
                   >
                     <option value="">Choose a course...</option>
                     {courses.map(course => (
-                      <option key={course.id} value={course.id}>{course.name}</option>
+                      <option key={course._id} value={course._id}>{course.name}</option>
                     ))}
                   </select>
                 </div>
@@ -221,28 +244,28 @@ function AttendancePage() {
             </div>
 
             {/* Attendance Table */}
-            {students.length > 0 && (
+            {coursesOrStudents.length > 0 && (
               <>
                 <AttendanceTable
-                  students={students}
+                  coursesOrStudents={coursesOrStudents}
                   userRole="teacher"
                   onMarkAttendance={handleAttendanceChange}
-                  attendanceData={attendance}
+                  attendanceSummary={attendanceSummary}
                 />
                 
                 <div className="flex justify-end">
                   <button
                     onClick={handleSaveAttendance}
                     className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
+                    disabled={loading}
                   >
-                    Save Attendance
+                    {loading ? 'Saving...' : 'Save Attendance'}
                   </button>
                 </div>
               </>
             )}
           </div>
         ) : (
-          // Student View
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -260,13 +283,16 @@ function AttendancePage() {
                   <div>
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Average Attendance</p>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {courses.length > 0 ? Math.round(
-                        courses.reduce((acc, course) => {
-                          const total = course.attendanceRecord.length
-                          const present = course.attendanceRecord.filter(r => r.present).length
-                          return acc + (total > 0 ? (present / total) * 100 : 0)
-                        }, 0) / courses.length
-                      ) : 0}%
+                      {courses.length > 0
+                        ? Math.round(
+                            courses.reduce((acc, course) => {
+                              const summary = course.attendanceSummary || {};
+                              const total = summary.totalClasses || 0;
+                              const present = (summary.presentCount || 0) + (summary.lateCount || 0);
+                              return acc + (total > 0 ? (present / total) * 100 : 0);
+                            }, 0) / courses.length
+                          )
+                        : 0}%
                     </p>
                   </div>
                 </div>
@@ -278,9 +304,10 @@ function AttendancePage() {
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Low Attendance</p>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">
                       {courses.filter(course => {
-                        const total = course.attendanceRecord.length
-                        const present = course.attendanceRecord.filter(r => r.present).length
-                        return total > 0 && (present / total) * 100 < 75
+                        const summary = course.attendanceSummary || {};
+                        const total = summary.totalClasses || 0;
+                        const present = (summary.presentCount || 0) + (summary.lateCount || 0);
+                        return total > 0 && (present / total) * 100 < 75;
                       }).length}
                     </p>
                   </div>
@@ -289,14 +316,19 @@ function AttendancePage() {
             </div>
 
             <AttendanceTable
-              students={courses}
+              coursesOrStudents={coursesOrStudents}
               userRole="student"
+              attendanceSummary={attendanceSummary}
             />
           </div>
         )}
       </main>
     </div>
-  )
+  );
 }
 
-export default AttendancePage
+AttendancePage.propTypes = {
+  navigate: PropTypes.func,
+};
+
+export default AttendancePage;

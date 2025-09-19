@@ -1,29 +1,34 @@
-import { useState } from 'react'
+import { useState } from 'react';
+import PropTypes from 'prop-types';
 
-function AttendanceTable({ students, userRole, onMarkAttendance, attendanceData = {} }) {
-  const [localAttendance, setLocalAttendance] = useState(attendanceData)
+function AttendanceTable({ coursesOrStudents, userRole, onMarkAttendance, attendanceSummary = {} }) {
+  const [localAttendance, setLocalAttendance] = useState(attendanceSummary || {});
 
-  const handleAttendanceToggle = (studentId) => {
-    if (userRole !== 'teacher') return
+  const handleAttendanceChange = (studentId, status) => {
+    if (userRole !== 'teacher') return;
     
-    const newStatus = !localAttendance[studentId]
     const updatedAttendance = {
       ...localAttendance,
-      [studentId]: newStatus
-    }
-    setLocalAttendance(updatedAttendance)
+      [studentId]: status // String: 'present', 'absent', etc.
+    };
+    setLocalAttendance(updatedAttendance);
     
     if (onMarkAttendance) {
-      onMarkAttendance(studentId, newStatus)
+      onMarkAttendance(studentId, status);
     }
-  }
+  };
 
-  const calculateAttendancePercentage = (student) => {
-    if (!student.attendanceRecord) return 0
-    const total = student.attendanceRecord.length
-    const present = student.attendanceRecord.filter(record => record.present).length
-    return total > 0 ? Math.round((present / total) * 100) : 0
-  }
+  const calculateAttendancePercentage = (summary) => {
+    // Use backend summary structure
+    if (!summary || summary.totalClasses === 0) return 0;
+    return Math.round(((summary.presentCount + summary.lateCount) / summary.totalClasses) * 100);
+  };
+
+  const getStatusClass = (percentage) => {
+    if (percentage >= 75) return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+    if (percentage >= 60) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+    return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+  };
 
   if (userRole === 'teacher') {
     return (
@@ -42,10 +47,7 @@ function AttendanceTable({ students, userRole, onMarkAttendance, attendanceData 
                   Roll Number
                 </th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Present
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Absent
+                  Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Overall %
@@ -53,7 +55,7 @@ function AttendanceTable({ students, userRole, onMarkAttendance, attendanceData 
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {students.map((student) => (
+              {coursesOrStudents.map((student) => (
                 <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                     {student.name}
@@ -62,25 +64,20 @@ function AttendanceTable({ students, userRole, onMarkAttendance, attendanceData 
                     {student.rollNumber || student.id}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <input
-                      type="radio"
-                      name={`attendance-${student.id}`}
-                      checked={localAttendance[student.id] === true}
-                      onChange={() => handleAttendanceToggle(student.id)}
-                      className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 dark:border-gray-600"
-                    />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <input
-                      type="radio"
-                      name={`attendance-${student.id}`}
-                      checked={localAttendance[student.id] === false}
-                      onChange={() => handleAttendanceToggle(student.id)}
-                      className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 dark:border-gray-600"
-                    />
+                    <select
+                      value={localAttendance[student.id] || ''}
+                      onChange={(e) => handleAttendanceChange(student.id, e.target.value)}
+                      className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                      <option value="">Select Status</option>
+                      <option value="present">Present</option>
+                      <option value="absent">Absent</option>
+                      <option value="late">Late</option>
+                      <option value="excused">Excused</option>
+                    </select>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                    {calculateAttendancePercentage(student)}%
+                    {calculateAttendancePercentage(student.attendanceSummary || {})}%
                   </td>
                 </tr>
               ))}
@@ -88,10 +85,10 @@ function AttendanceTable({ students, userRole, onMarkAttendance, attendanceData 
           </table>
         </div>
       </div>
-    )
+    );
   }
 
-  // Student view - display attendance summary
+  // Student view (assume coursesOrStudents is courses with attendanceSummary)
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div className="p-6">
@@ -119,41 +116,44 @@ function AttendanceTable({ students, userRole, onMarkAttendance, attendanceData 
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {students.map((course) => {
-              const percentage = calculateAttendancePercentage(course)
+            {coursesOrStudents.map((course) => {
+              const percentage = calculateAttendancePercentage(course.attendanceSummary || {});
               return (
                 <tr key={course.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                     {course.name}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                    {course.attendanceRecord ? course.attendanceRecord.filter(r => r.present).length : 0}
+                    {course.attendanceSummary?.presentCount || 0}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                    {course.attendanceRecord ? course.attendanceRecord.length : 0}
+                    {course.attendanceSummary?.totalClasses || 0}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                     {percentage}%
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      percentage >= 75 
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                        : percentage >= 60
-                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      getStatusClass(percentage)
                     }`}>
                       {percentage >= 75 ? 'Good' : percentage >= 60 ? 'Warning' : 'Critical'}
                     </span>
                   </td>
                 </tr>
-              )
+              );
             })}
           </tbody>
         </table>
       </div>
     </div>
-  )
+  );
 }
 
-export default AttendanceTable
+AttendanceTable.propTypes = {
+  coursesOrStudents: PropTypes.array.isRequired,
+  userRole: PropTypes.oneOf(['student', 'teacher', 'admin']).isRequired,
+  onMarkAttendance: PropTypes.func,
+  attendanceSummary: PropTypes.object,
+};
+
+export default AttendanceTable;

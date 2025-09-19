@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState } from 'react';
+import PropTypes from 'prop-types';
 
-function AuthForm({ isLogin, setIsLogin, formData, setFormData, handleInputChange, handleSubmit }) {
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+function AuthForm({ isLogin, setIsLogin, formData, handleInputChange, handleSubmit }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   return (
     <div className="w-full max-w-md">
@@ -93,6 +94,69 @@ function AuthForm({ isLogin, setIsLogin, formData, setFormData, handleInputChang
 
         {!isLogin && (
           <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  First Name
+                </label>
+                <input
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName || ''}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  placeholder="Enter your first name"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Last Name
+                </label>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName || ''}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  placeholder="Enter your last name"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Academic Role
+              </label>
+              <select
+                name="role"
+                value={formData.role || 'student'}
+                onChange={handleInputChange}
+                className="w-full px-3 py-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              >
+                <option value="student">Student</option>
+                <option value="teacher">Faculty Member</option>
+              </select>
+            </div>
+
+            {formData.role === 'student' && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Roll Number
+                </label>
+                <input
+                  type="text"
+                  name="rollNumber"
+                  value={formData.rollNumber || ''}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  placeholder="Enter your roll number"
+                  required
+                />
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Confirm Password
@@ -101,7 +165,7 @@ function AuthForm({ isLogin, setIsLogin, formData, setFormData, handleInputChang
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
-                  value={formData.confirmPassword}
+                  value={formData.confirmPassword || ''}
                   onChange={handleInputChange}
                   className="w-full px-3 py-4 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   placeholder="Confirm your password"
@@ -124,21 +188,6 @@ function AuthForm({ isLogin, setIsLogin, formData, setFormData, handleInputChang
                   )}
                 </button>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Academic Role
-              </label>
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleInputChange}
-                className="w-full px-3 py-4 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              >
-                <option value="student">Student</option>
-                <option value="teacher">Faculty Member</option>
-              </select>
             </div>
           </>
         )}
@@ -176,7 +225,23 @@ function AuthForm({ isLogin, setIsLogin, formData, setFormData, handleInputChang
         </p>
       </div>
     </div>
-  )
+  );
 }
 
-export default AuthForm 
+AuthForm.propTypes = {
+  isLogin: PropTypes.bool.isRequired,
+  setIsLogin: PropTypes.func.isRequired,
+  formData: PropTypes.shape({
+    email: PropTypes.string,
+    password: PropTypes.string,
+    confirmPassword: PropTypes.string,
+    role: PropTypes.string,
+    firstName: PropTypes.string,
+    lastName: PropTypes.string,
+    rollNumber: PropTypes.string,
+  }).isRequired,
+  handleInputChange: PropTypes.func.isRequired,
+  handleSubmit: PropTypes.func.isRequired,
+};
+
+export default AuthForm;
