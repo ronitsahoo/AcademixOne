@@ -10,15 +10,11 @@ const submissionSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  files: [{
-    filename: String,
-    originalName: String,
-    path: String,
-    size: Number,
-    mimetype: String
-  }],
-  textSubmission: {
+  // Simplified submission - just text content
+  // Students can paste links to files or write text directly
+  content: {
     type: String,
+    required: true,
     trim: true
   },
   grade: {
@@ -92,18 +88,8 @@ const assignmentSchema = new mongoose.Schema({
     size: Number,
     mimetype: String
   }],
-  submissionType: {
-    type: String,
-    enum: ['file', 'text', 'both'],
-    default: 'both'
-  },
-  allowedFileTypes: [{
-    type: String
-  }],
-  maxFileSize: {
-    type: Number,
-    default: 5242880 // 5MB in bytes
-  },
+  // Simplified - students can submit text (including links to files)
+  // No need for complex file type restrictions
   submissions: [submissionSchema],
   isActive: {
     type: Boolean,
@@ -120,7 +106,9 @@ const assignmentSchema = new mongoose.Schema({
     max: 100
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
 // Indexes for better performance

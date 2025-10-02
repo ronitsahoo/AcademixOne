@@ -35,18 +35,29 @@ router.get('/profile', authenticate, async (req, res) => {
 // @access  Private
 router.put('/profile', authenticate, validateUpdateProfile, async (req, res) => {
   try {
+    console.log('Profile update request body:', req.body);
     const { profile } = req.body;
     
+    if (!profile) {
+      return res.status(400).json({ message: 'Profile data is required' });
+    }
+    
     const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    console.log('Current user profile:', user.profile);
+    console.log('Profile update data:', profile);
     
     // Update profile fields
-    if (profile) {
-      Object.keys(profile).forEach(key => {
-        if (profile[key] !== undefined) {
-          user.profile[key] = profile[key];
-        }
-      });
-    }
+    Object.keys(profile).forEach(key => {
+      if (profile[key] !== undefined && profile[key] !== null) {
+        user.profile[key] = profile[key];
+      }
+    });
+    
+    console.log('Updated user profile:', user.profile);
     
     await user.save();
     
@@ -58,6 +69,12 @@ router.put('/profile', authenticate, validateUpdateProfile, async (req, res) => 
     console.error('Update profile error:', error);
     if (error.code === 11000) {
       return res.status(400).json({ message: 'Roll number already exists' });
+    }
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        message: 'Validation error', 
+        details: error.message 
+      });
     }
     res.status(500).json({ message: 'Server error while updating profile' });
   }

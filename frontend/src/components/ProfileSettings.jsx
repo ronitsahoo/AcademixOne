@@ -24,8 +24,8 @@ function ProfileSettings({ user, onUpdate, onClose }) {
     setLoading(true);
 
     try {
-      const response = await apiService.updateUserProfile({ profile: formData }); // Nested profile for backend
-      onUpdate(response.data.user);
+      const response = await apiService.updateUserProfile(formData); // API service handles wrapping
+      onUpdate(response.user);
       alert('Profile updated successfully!');
       onClose();
     } catch (error) {

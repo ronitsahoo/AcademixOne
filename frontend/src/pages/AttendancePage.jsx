@@ -98,23 +98,43 @@ function AttendancePage() {
       return;
     }
 
+    // Check if any attendance has been marked
+    const hasAttendanceData = Object.keys(attendanceSummary).length > 0;
+    if (!hasAttendanceData) {
+      alert('Please mark attendance for at least one student.');
+      return;
+    }
+
     try {
       setLoading(true);
-      const attendanceData = {
-        courseId: selectedCourse,
+      
+      // First create the attendance session
+      const sessionData = {
+        course: selectedCourse,
         date,
-        lectureCount,
-        attendance: Object.entries(attendanceSummary).map(([studentId, status]) => ({
-          studentId,
-          status,
-        })),
+        session: `Lecture ${lectureCount}`,
+        topic: 'Class Session',
+        duration: 60
       };
-      await apiService.createAttendanceSession(attendanceData);
+      
+      const sessionResponse = await apiService.createAttendanceSession(sessionData);
+      const attendanceId = sessionResponse.attendance._id;
+      
+      // Then bulk mark attendance for all students
+      const attendanceData = Object.entries(attendanceSummary).map(([studentId, status]) => ({
+        studentId,
+        status,
+        notes: ''
+      }));
+      
+      await apiService.post(`/attendance/${attendanceId}/bulk-mark`, { attendanceData });
+      
       alert('Attendance saved successfully!');
       setAttendanceSummary({});
       setSelectedCourse('');
       setCoursesOrStudents([]);
     } catch (err) {
+      console.error('Attendance save error:', err);
       setError(err.message || 'Failed to save attendance');
     } finally {
       setLoading(false);

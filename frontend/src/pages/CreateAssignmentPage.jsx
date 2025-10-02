@@ -83,7 +83,7 @@ function CreateAssignmentPage() {
       await apiService.createAssignment(assignmentData);
       
       // Navigate back to course page
-      navigate(`/teacher-course/${courseId}`, { 
+      navigate(`/course/${courseId}`, { 
         state: { message: 'Assignment created successfully!' } 
       });
     } catch (err) {
@@ -152,7 +152,7 @@ function CreateAssignmentPage() {
             </div>
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => navigate(`/teacher-course/${courseId}`)}
+                onClick={() => navigate(`/course/${courseId}`)}
                 className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
               >
                 Back to Course
@@ -323,7 +323,7 @@ function CreateAssignmentPage() {
             <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200 dark:border-gray-700">
               <button
                 type="button"
-                onClick={() => navigate(`/teacher-course/${courseId}`)}
+                onClick={() => navigate(`/course/${courseId}`)}
                 className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors duration-200"
                 disabled={isSubmitting}
               >

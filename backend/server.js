@@ -6,6 +6,8 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -14,6 +16,11 @@ import courseRoutes from './routes/courses.js';
 import assignmentRoutes from './routes/assignments.js';
 import attendanceRoutes from './routes/attendance.js';
 import uploadRoutes from './routes/upload.js';
+import chatRoutes from './routes/chat.js';
+import announcementRoutes from './routes/announcements.js';
+
+// Import socket handlers
+import { authenticateSocket, handleSocketConnection } from './socket/socketHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,7 +42,25 @@ console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'Found' : 'Missing');
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Found' : 'Missing');
 
 const app = express();
+const server = createServer(app);
 let PORT = process.env.PORT || 3001;
+
+// Initialize Socket.io with simplified configuration
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  allowEIO3: true,
+  transports: ['websocket', 'polling']
+});
+
+// Socket authentication middleware
+io.use(authenticateSocket);
+
+// Handle socket connections
+handleSocketConnection(io);
 
 // Security middleware
 app.use(helmet());
@@ -73,6 +98,8 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/announcements', announcementRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -120,40 +147,19 @@ app.use('*', (req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-// Function to find available port
-const findAvailablePort = (startPort) => {
-  return new Promise((resolve) => {
-    const server = app.listen(startPort, () => {
-      const port = server.address().port;
-      server.close(() => resolve(port));
-    }).on('error', () => {
-      resolve(findAvailablePort(startPort + 1));
-    });
-  });
-};
-
 // MongoDB connection with retry logic
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/academixone';
 
 const connectWithRetry = () => {
-  mongoose.connect(MONGODB_URI, {
-    serverSelectionTimeoutMS: 5000,
-    socketTimeoutMS: 45000,
-  })
-  .then(async () => {
+  mongoose.connect(MONGODB_URI)
+  .then(() => {
     console.log('✅ Connected to MongoDB');
     
-    // Find available port
-    const availablePort = await findAvailablePort(PORT);
-    if (availablePort !== PORT) {
-      console.log(`⚠️  Port ${PORT} is busy, switching to port ${availablePort}`);
-      PORT = availablePort;
-    }
-    
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🌐 API URL: http://localhost:${PORT}/api`);
+      console.log(`� Socvket.io enabled for real-time chat`);
     });
   })
   .catch((error) => {
@@ -165,7 +171,7 @@ const connectWithRetry = () => {
 
 // Handle MongoDB connection events
 mongoose.connection.on('disconnected', () => {
-  console.log('⚠️  MongoDB disconnected. Attempting to reconnect...');
+  console.log('⚠️  MongoDB disconnected');
 });
 
 mongoose.connection.on('error', (err) => {
@@ -202,7 +208,8 @@ process.on('uncaughtException', (err) => {
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  console.log('🔄 Server will continue running...');
+  // Don't continue running on unhandled rejections - exit gracefully
+  process.exit(1);
 });
 
 export default app;

@@ -1,18 +1,24 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import PropTypes from 'prop-types'
 import FeatureSection from '../components/FeatureSection'
 import AuthForm from '../components/AuthForm'
 import ThemeToggle from '../components/ThemeToggle'
 import apiService from '../services/api'
 
-function LoginPage() {
+function LoginPage({ updateAuthState }) {
   const navigate = useNavigate()
   const [isLogin, setIsLogin] = useState(true)
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'student'
+    role: 'student',
+    firstName: '',
+    lastName: '',
+    rollNumber: '',
+    department: '',
+    semester: ''
   })
 
   const handleInputChange = (e) => {
@@ -30,9 +36,8 @@ function LoginPage() {
         // Handle login
         const response = await apiService.login(formData.email, formData.password)
 
-        // Store user data
-        localStorage.setItem('isAuthenticated', 'true')
-        localStorage.setItem('user', JSON.stringify(response.user))
+        // Update authentication state
+        updateAuthState(true, response.user);
 
         // Navigate based on role
         if (response.user.role === 'student') {
@@ -47,7 +52,19 @@ function LoginPage() {
           return
         }
 
-        const response = await apiService.register(formData.email, formData.password, formData.role)
+        // Prepare profile data for students
+        const profileData = formData.role === 'student' ? {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          rollNumber: formData.rollNumber,
+          department: formData.department,
+          semester: formData.semester
+        } : {
+          firstName: formData.firstName,
+          lastName: formData.lastName
+        };
+
+        const response = await apiService.register(formData.email, formData.password, formData.role, profileData)
 
         // Store user data
         localStorage.setItem('isAuthenticated', 'true')
@@ -90,5 +107,9 @@ function LoginPage() {
     </div>
   )
 }
+
+LoginPage.propTypes = {
+  updateAuthState: PropTypes.func.isRequired
+};
 
 export default LoginPage 

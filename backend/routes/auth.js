@@ -10,7 +10,7 @@ const router = express.Router();
 // @access  Public
 router.post('/register', validateRegister, async (req, res) => {
   try {
-    const { email, password, role } = req.body;
+    const { email, password, role, profile } = req.body;
     
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -19,11 +19,18 @@ router.post('/register', validateRegister, async (req, res) => {
     }
     
     // Create new user
-    const user = new User({
+    const userData = {
       email,
       password,
       role
-    });
+    };
+    
+    // Add profile data if provided
+    if (profile) {
+      userData.profile = profile;
+    }
+    
+    const user = new User(userData);
     
     await user.save();
     

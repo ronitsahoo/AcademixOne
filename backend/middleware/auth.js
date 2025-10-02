@@ -11,7 +11,8 @@ export const authenticate = async (req, res, next) => {
     }
     
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select('-password');
+    const userId = decoded.id || decoded.userId;
+    const user = await User.findById(userId).select('-password');
     
     if (!user || !user.isActive) {
       return res.status(401).json({ message: 'Invalid token or user not found.' });
@@ -85,7 +86,10 @@ export const isOwnerOrAdmin = (resourceUserField = 'user') => {
 // Generate JWT token
 export const generateToken = (userId) => {
   return jwt.sign(
-    { id: userId },
+    { 
+      id: userId,
+      userId: userId  // Add both for compatibility
+    },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRE || '7d' }
   );
@@ -98,7 +102,8 @@ export const optionalAuth = async (req, res, next) => {
     
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.id).select('-password');
+      const userId = decoded.id || decoded.userId;
+      const user = await User.findById(userId).select('-password');
       
       if (user && user.isActive) {
         req.user = user;

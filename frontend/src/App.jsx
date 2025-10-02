@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import LoginPage from './pages/LoginPage';
@@ -5,23 +6,84 @@ import StudentDashboard from './pages/StudentDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import TeacherCoursePage from './pages/TeacherCoursePage';
 import CourseDetails from './pages/CourseDetails';
-import AttendancePage from './pages/AttendancePage';
+
+import GradeAssignmentPage from './pages/GradeAssignmentPage';
 import CreateAssignmentPage from './pages/CreateAssignmentPage';
+import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import './styles/global.css';
 
 function App() {
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState({});
+  const [loading, setLoading] = useState(true);
 
-  // Early redirect for unauthenticated users
-  if (!isAuthenticated && window.location.pathname !== '/') {
-    return <Navigate to="/" replace />;
+  useEffect(() => {
+    // Initialize authentication state from localStorage
+    const authStatus = localStorage.getItem('isAuthenticated') === 'true';
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    setIsAuthenticated(authStatus);
+    setUser(userData);
+    setLoading(false);
+
+    // Listen for storage changes (when user logs out/in from another tab)
+    const handleStorageChange = (e) => {
+      if (e.key === 'isAuthenticated') {
+        setIsAuthenticated(e.newValue === 'true');
+      }
+      if (e.key === 'user') {
+        setUser(JSON.parse(e.newValue || '{}'));
+      }
+    };
+
+    // Listen for custom auth state change events
+    const handleAuthStateChange = (e) => {
+      setIsAuthenticated(e.detail.isAuthenticated);
+      setUser(e.detail.user || {});
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('authStateChange', handleAuthStateChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('authStateChange', handleAuthStateChange);
+    };
+  }, []);
+
+  // Function to update authentication state
+  const updateAuthState = (authStatus, userData = {}) => {
+    setIsAuthenticated(authStatus);
+    setUser(userData);
+    
+    if (authStatus) {
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('user', JSON.stringify(userData));
+    } else {
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+    }
+
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new CustomEvent('authStateChange', {
+      detail: { isAuthenticated: authStatus, user: userData }
+    }));
+  };
+
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<LoginPage />} />
+        <Route path="/" element={<LoginPage updateAuthState={updateAuthState} />} />
         <Route
           path="/student-dashboard"
           element={
@@ -57,7 +119,7 @@ function App() {
           }
         />
         <Route
-          path="/teacher-course/:courseId/create-assignment"
+          path="/course/:courseId/create-assignment"
           element={
             isAuthenticated && user.role === 'teacher' ? (
               <CreateAssignmentPage />
@@ -67,24 +129,19 @@ function App() {
           }
         />
         <Route
-          path="/teacher-course/:courseId/assignment/:assignmentId/grade"
+          path="/course/:courseId/assignment/:assignmentId/grade"
           element={
             isAuthenticated && user.role === 'teacher' ? (
-              // Placeholder for GradeAssignmentPage - implement as needed
-              <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                  <h2 className="text-2xl font-bold mb-4">Grade Assignment</h2>
-                  <p>Grading interface goes here.</p>
-                </div>
-              </div>
+              <GradeAssignmentPage />
             ) : (
               <Navigate to="/" replace />
             )
           }
         />
+
         <Route
-          path="/attendance"
-          element={isAuthenticated ? <AttendancePage /> : <Navigate to="/" replace />}
+          path="/profile-settings"
+          element={isAuthenticated ? <ProfileSettingsPage /> : <Navigate to="/" replace />}
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

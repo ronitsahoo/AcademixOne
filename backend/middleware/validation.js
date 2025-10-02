@@ -30,14 +30,31 @@ export const validateRegister = [
   body('role')
     .isIn(['student', 'teacher', 'admin'])
     .withMessage('Role must be student, teacher, or admin'),
+  body('profile.firstName')
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('First name must be between 1 and 50 characters'),
+  body('profile.lastName')
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Last name must be between 1 and 50 characters'),
   body('profile.rollNumber')
-    .optional()
-    .custom((value) => {
-      if (value && !/^[A-Z]{2}\d{4}$/.test(value)) {
-        throw new Error('Invalid roll number format');
-      }
-      return true;
-    }),
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isLength({ min: 1, max: 20 })
+    .withMessage('Roll number must be between 1 and 20 characters'),
+  body('profile.department')
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Department must be between 1 and 100 characters'),
+  body('profile.semester')
+    .optional({ nullable: true, checkFalsy: true })
+    .trim()
+    .isLength({ min: 1, max: 20 })
+    .withMessage('Semester must be between 1 and 20 characters'),
   handleValidationErrors
 ];
 
@@ -55,31 +72,36 @@ export const validateLogin = [
 // User validation rules
 export const validateUpdateProfile = [
   body('profile.firstName')
-    .optional()
+    .optional({ nullable: true, checkFalsy: true })
     .trim()
     .isLength({ min: 1, max: 50 })
     .withMessage('First name must be between 1 and 50 characters'),
   body('profile.lastName')
-    .optional()
+    .optional({ nullable: true, checkFalsy: true })
     .trim()
     .isLength({ min: 1, max: 50 })
     .withMessage('Last name must be between 1 and 50 characters'),
   body('profile.phone')
-    .optional()
-    .isMobilePhone()
-    .withMessage('Please provide a valid phone number'),
+    .optional({ nullable: true, checkFalsy: true })
+    .custom((value) => {
+      if (value && value.trim().length > 0) {
+        return value.trim().length >= 10 && value.trim().length <= 15;
+      }
+      return true; // Allow empty/null values
+    })
+    .withMessage('Phone number must be between 10 and 15 characters when provided'),
   body('profile.department')
-    .optional()
+    .optional({ nullable: true, checkFalsy: true })
     .trim()
     .isLength({ min: 1, max: 100 })
     .withMessage('Department must be between 1 and 100 characters'),
   body('profile.semester')
-    .optional()
+    .optional({ nullable: true, checkFalsy: true })
     .trim()
     .isLength({ min: 1, max: 20 })
     .withMessage('Semester must be between 1 and 20 characters'),
   body('profile.rollNumber')
-    .optional()
+    .optional({ nullable: true, checkFalsy: true })
     .trim()
     .isLength({ min: 1, max: 20 })
     .withMessage('Roll number must be between 1 and 20 characters'),
@@ -203,6 +225,58 @@ export const validateCreateAssignment = [
     .optional()
     .isIn(['file', 'text', 'both'])
     .withMessage('Submission type must be file, text, or both'),
+  handleValidationErrors
+];
+
+export const validateUpdateAssignment = [
+  body('title')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 200 })
+    .withMessage('Assignment title must be between 1 and 200 characters'),
+  body('description')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 2000 })
+    .withMessage('Assignment description must be between 1 and 2000 characters'),
+  body('instructions')
+    .optional()
+    .trim()
+    .isLength({ max: 5000 })
+    .withMessage('Instructions must not exceed 5000 characters'),
+  body('course')
+    .optional()
+    .custom(isValidObjectId)
+    .withMessage('Invalid course ID'),
+  body('dueDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Due date must be a valid date'),
+  body('maxScore')
+    .optional()
+    .isInt({ min: 1, max: 1000 })
+    .withMessage('Max score must be between 1 and 1000'),
+  body('submissionType')
+    .optional()
+    .isIn(['file', 'text', 'both'])
+    .withMessage('Submission type must be file, text, or both'),
+  body('allowLateSubmission')
+    .optional()
+    .isBoolean()
+    .withMessage('Allow late submission must be a boolean'),
+  body('lateSubmissionPenalty')
+    .optional()
+    .isInt({ min: 0, max: 100 })
+    .withMessage('Late submission penalty must be between 0 and 100'),
+  handleValidationErrors
+];
+
+export const validateSubmitAssignment = [
+  body('content')
+    .notEmpty()
+    .trim()
+    .isLength({ min: 1, max: 10000 })
+    .withMessage('Submission content is required and must be between 1 and 10000 characters'),
   handleValidationErrors
 ];
 

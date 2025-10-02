@@ -91,6 +91,69 @@ router.get('/', optionalAuth, validatePagination, async (req, res) => {
   }
 });
 
+// @route   POST /api/courses
+// @desc    Create a new course
+// @access  Private (Teachers only)
+router.post('/', authenticate, isTeacher, validateCreateCourse, async (req, res) => {
+  try {
+    const {
+      name,
+      code,
+      description,
+      department,
+      semester,
+      credits,
+      maxStudents,
+      startDate,
+      endDate
+    } = req.body;
+
+    // Check if course code already exists
+    const existingCourse = await Course.findOne({ code });
+    if (existingCourse) {
+      return res.status(400).json({ message: 'Course code already exists' });
+    }
+
+    // Create new course
+    const course = new Course({
+      name,
+      code,
+      description,
+      department,
+      semester,
+      credits: parseInt(credits),
+      maxStudents: parseInt(maxStudents) || 50,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      instructor: req.user._id,
+      isActive: true
+    });
+
+    await course.save();
+
+    // Add course to teacher's teaching courses
+    await User.findByIdAndUpdate(
+      req.user._id,
+      { $push: { teachingCourses: course._id } }
+    );
+
+    // Populate instructor details for response
+    const populatedCourse = await Course.findById(course._id)
+      .populate('instructor', 'profile.firstName profile.lastName email');
+
+    res.status(201).json({
+      message: 'Course created successfully',
+      course: populatedCourse
+    });
+  } catch (error) {
+    console.error('Create course error:', error);
+    if (error.code === 11000) {
+      return res.status(400).json({ message: 'Course code already exists' });
+    }
+    res.status(500).json({ message: 'Server error while creating course' });
+  }
+});
+
 // Get all announcements for a course
 export const getAnnouncements = async (req, res) => {
   try {
@@ -317,14 +380,22 @@ router.get('/:id/students', authenticate, validateObjectId('id'), async (req, re
       return res.status(404).json({ message: 'Course not found' });
     }
     
-    // Check if user is the instructor or admin
-    if (course.instructor.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Only course instructor or admin can view students.' });
+    // Check if user is the instructor, admin, or enrolled student
+    const isInstructor = course.instructor && course.instructor.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+    const isEnrolledStudent = course.students.some(s => 
+      s.student && s.student._id.toString() === req.user._id.toString() && s.status === 'enrolled'
+    );
+    
+    if (!isInstructor && !isAdmin && !isEnrolledStudent) {
+      return res.status(403).json({ message: 'Access denied. Only course instructor, admin, or enrolled students can view students.' });
     }
     
-    const students = course.students.filter(s => s.status === 'enrolled');
+    const enrolledStudents = course.students
+      .filter(s => s.status === 'enrolled' && s.student) // Filter out null students
+      .map(s => s.student);
     
-    res.json({ students });
+    res.json({ students: enrolledStudents });
   } catch (error) {
     console.error('Get course students error:', error);
     res.status(500).json({ message: 'Server error while fetching course students' });

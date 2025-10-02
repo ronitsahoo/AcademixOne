@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001') + '/api';
 
 // Fallback URLs for different environments
 const FALLBACK_URLS = [
@@ -188,8 +188,15 @@ class ApiService {
     return response;
   }
 
-  async register(email, password, role) {
-    const response = await this.post('/auth/register', { email, password, role });
+  async register(email, password, role, profileData = {}) {
+    const registrationData = { email, password, role };
+    
+    // Add profile data if provided
+    if (Object.keys(profileData).length > 0) {
+      registrationData.profile = profileData;
+    }
+    
+    const response = await this.post('/auth/register', registrationData);
     if (response.token) {
       this.setAuthToken(response.token);
     }
@@ -218,7 +225,9 @@ class ApiService {
   }
 
   async updateUserProfile(profileData) {
-    return this.put('/users/profile', { profile: profileData });
+    // Ensure we don't double-wrap the profile data
+    const payload = profileData.profile ? profileData : { profile: profileData };
+    return this.put('/users/profile', payload);
   }
 
   async getUsers(params = {}) {
@@ -408,6 +417,36 @@ class ApiService {
     return this.get(`/upload/info/${category}/${filename}`);
   }
 
+  // Announcement methods
+  async getAnnouncements(courseId) {
+    return this.get(`/announcements/course/${courseId}`);
+  }
+
+  async createAnnouncement(announcementData) {
+    return this.post('/announcements', announcementData);
+  }
+
+  async updateAnnouncement(announcementId, announcementData) {
+    return this.put(`/announcements/${announcementId}`, announcementData);
+  }
+
+  async deleteAnnouncement(announcementId) {
+    return this.delete(`/announcements/${announcementId}`);
+  }
+
+  async markAnnouncementAsRead(announcementId) {
+    return this.post(`/announcements/${announcementId}/read`);
+  }
+
+  // Additional attendance methods
+  async getCourseAttendance(courseId, params = {}) {
+    return this.get(`/courses/${courseId}/attendance`, params);
+  }
+
+  async getStudentAttendanceSummary(studentId, courseId) {
+    return this.get(`/attendance/student/${studentId}/summary`, { courseId });
+  }
+
   // Health check
   async healthCheck() {
     return this.get('/health');
@@ -415,58 +454,32 @@ class ApiService {
 
   // Grade submission
   async gradeSubmission(submissionId, grade, feedback) {
-    const response = await fetch(`${this.baseURL}/assignments/submissions/${submissionId}/grade`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ grade, feedback }),
-    });
-    return this.handleResponse(response);
+    return this.put(`/assignments/submissions/${submissionId}/grade`, { grade, feedback });
   }
 
   // Remove student from course
   async removeStudentFromCourse(courseId, studentId) {
-    const response = await fetch(`${this.baseURL}/courses/${courseId}/remove-student`, {
-      method: 'DELETE',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ studentId }),
-    });
-    return this.handleResponse(response);
+    return this.delete(`/courses/${courseId}/remove-student`, { studentId });
   }
 
   // Approve student for course
   async approveStudentForCourse(courseId, studentId) {
-    const response = await fetch(`${this.baseURL}/courses/${courseId}/approve-student`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ studentId }),
-    });
-    return this.handleResponse(response);
+    return this.post(`/courses/${courseId}/approve-student`, { studentId });
   }
 
   // Get attendance summary
   async getAttendanceSummary(courseId) {
-    const response = await fetch(`${this.baseURL}/courses/${courseId}/attendance-summary`, {
-      headers: this.getHeaders(),
-    });
-    return this.handleResponse(response);
+    return this.get(`/courses/${courseId}/attendance-summary`);
   }
 
   // Mark attendance
   async markAttendance(courseId, date, session, topic, attendanceData) {
-    const response = await fetch(`${this.baseURL}/courses/${courseId}/attendance`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ date, session, topic, attendanceData }),
-    });
-    return this.handleResponse(response);
+    return this.post(`/courses/${courseId}/attendance`, { date, session, topic, attendanceData });
   }
 
   // Get assignment submissions
   async getAssignmentSubmissions(assignmentId) {
-    const response = await fetch(`${this.baseURL}/assignments/${assignmentId}/submissions`, {
-      headers: this.getHeaders(),
-    });
-    return this.handleResponse(response);
+    return this.get(`/assignments/${assignmentId}/submissions`);
   }
 }
 

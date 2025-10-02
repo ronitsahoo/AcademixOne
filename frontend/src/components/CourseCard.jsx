@@ -21,7 +21,11 @@ function CourseCard({ course, userRole, onJoin, onEdit }) {
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{course.name}</h3>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
         {userRole === 'student' ? 
-          `Instructor: ${course.instructor?.profile?.fullName || course.instructor?.profile?.firstName || course.instructor?.email || 'TBD'}` : 
+          `Instructor: ${course.instructor ? (
+            course.instructor.profile?.firstName || course.instructor.profile?.lastName ?
+              `${course.instructor.profile?.firstName || ''} ${course.instructor.profile?.lastName || ''}`.trim() :
+              course.instructor.email || 'Unknown'
+          ) : 'TBD'}` : 
           `${course.enrolledCount || 0} students enrolled`}
       </p>
       

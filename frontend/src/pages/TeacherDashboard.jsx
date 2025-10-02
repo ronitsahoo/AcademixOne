@@ -8,6 +8,7 @@ import AttendanceTable from '../components/AttendanceTable';
 
 import apiService from '../services/api';
 import logo from '../assets/logo.png';
+import { logout } from '../utils/auth';
 
 function TeacherDashboard() {
   const navigate = useNavigate();
@@ -40,6 +41,8 @@ function TeacherDashboard() {
     'Mechanical',
     'Civil',
     'Electrical',
+    'Chemical',
+    'Biotechnology'
   ];
 
   // Memoize loadDashboardData to prevent redefinition
@@ -105,16 +108,8 @@ function TeacherDashboard() {
     loadDashboardData();
   }, [loadDashboardData]);
 
-  const handleLogout = async () => {
-    try {
-      await apiService.logout();
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      localStorage.removeItem('user');
-      localStorage.removeItem('isAuthenticated');
-      navigate('/');
-    }
+  const handleLogout = () => {
+    logout(navigate);
   };
 
   const handleCreateCourse = async (e) => {
@@ -173,7 +168,7 @@ function TeacherDashboard() {
   };
 
   const handleEditCourse = (course) => {
-    navigate(`/teacher-course/${course._id}`);
+    navigate(`/course/${course._id}`);
   };
 
   const handleApproveStudent = async (studentId, courseId) => {
@@ -244,9 +239,7 @@ function TeacherDashboard() {
             {[
               { id: 'overview', name: 'Overview', icon: '📊' },
               { id: 'courses', name: 'My Courses', icon: '📚' },
-              { id: 'students', name: 'Students', icon: '👥' },
               { id: 'assignments', name: 'Assignments', icon: '📝' },
-              { id: 'attendance', name: 'Attendance', icon: '📅' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -350,6 +343,110 @@ function TeacherDashboard() {
               </div>
             </div>
 
+            {/* Recent Activity */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Activity</h3>
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {/* Upcoming Assignments */}
+                {assignments
+                  .filter(a => new Date(a.dueDate) >= new Date())
+                  .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+                  .slice(0, 3)
+                  .map((assignment) => (
+                    <div key={`upcoming-${assignment._id}`} className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center space-x-3">
+                        <div className="text-2xl">📝</div>
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-white">{assignment.title}</p>
+                          <p className="text-sm text-blue-600 dark:text-blue-400">
+                            Due: {assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : 'No due date'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
+                          Upcoming
+                        </span>
+                        <button
+                          onClick={() => navigate(`/course/${assignment.course._id || assignment.course}`)}
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 text-sm"
+                        >
+                          View
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                {/* Recent Assignments (Past Due) */}
+                {assignments
+                  .filter(a => new Date(a.dueDate) < new Date())
+                  .sort((a, b) => new Date(b.dueDate) - new Date(a.dueDate))
+                  .slice(0, 2)
+                  .map((assignment) => (
+                    <div key={`past-${assignment._id}`} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="text-2xl">📝</div>
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-white">{assignment.title}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Due: {assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : 'No due date'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-2 py-1 rounded-full">
+                          Past Due
+                        </span>
+                        <button
+                          onClick={() => navigate(`/course/${assignment.course._id || assignment.course}`)}
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 text-sm"
+                        >
+                          View
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                
+                {/* Active Courses */}
+                {courses
+                  .filter(c => new Date(c.endDate) >= new Date())
+                  .slice(0, 3)
+                  .map((course) => (
+                    <div key={`course-${course._id}`} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                      <div className="flex items-center space-x-3">
+                        <div className="text-2xl">📚</div>
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-white">{course.name}</p>
+                          <p className="text-sm text-green-600 dark:text-green-400">
+                            {course.students?.length || 0} students • {course.code}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full">
+                          Active
+                        </span>
+                        <button
+                          onClick={() => navigate(`/course/${course._id}`)}
+                          className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200 text-sm"
+                        >
+                          Manage
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                {/* Show message if no recent activity */}
+                {assignments.length === 0 && courses.length === 0 && (
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-2">📋</div>
+                    <p className="text-gray-500 dark:text-gray-400 font-medium">No recent activity</p>
+                    <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Create a course or assignment to get started</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Quick Actions */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
@@ -362,11 +459,11 @@ function TeacherDashboard() {
                   Create New Course
                 </button>
                 <button
-                  onClick={() => navigate('/attendance')}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-                  aria-label="Mark attendance"
+                  onClick={() => setActiveTab('assignments')}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+                  aria-label="View assignments"
                 >
-                  Mark Attendance
+                  View Assignments
                 </button>
               </div>
             </div>
@@ -456,13 +553,23 @@ function TeacherDashboard() {
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Semester
                       </label>
-                      <input
+                      <select
                         name="semester"
                         value={newCourse.semester}
                         onChange={handleInputChange}
-                        placeholder="Semester"
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      />
+                        required
+                      >
+                        <option value="">Select Semester</option>
+                        <option value="Semester 1">Semester 1</option>
+                        <option value="Semester 2">Semester 2</option>
+                        <option value="Semester 3">Semester 3</option>
+                        <option value="Semester 4">Semester 4</option>
+                        <option value="Semester 5">Semester 5</option>
+                        <option value="Semester 6">Semester 6</option>
+                        <option value="Semester 7">Semester 7</option>
+                        <option value="Semester 8">Semester 8</option>
+                      </select>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -634,10 +741,10 @@ function TeacherDashboard() {
                     </div>
                     <div className="flex items-center space-x-2 ml-4">
                       <button
-                        onClick={() => navigate(`/teacher-course/${assignment.course._id || assignment.course}`)}
+                        onClick={() => navigate(`/course/${assignment.course._id || assignment.course}`)}
                         className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 text-sm"
                       >
-                        Edit
+                        View Course
                       </button>
                       <button
                         onClick={async () => {
@@ -655,7 +762,7 @@ function TeacherDashboard() {
                         Delete
                       </button>
                       <button
-                        onClick={() => navigate(`/teacher-course/${assignment.course._id || assignment.course}/assignment/${assignment._id}/grade`)}
+                        onClick={() => navigate(`/course/${assignment.course._id || assignment.course}/assignment/${assignment._id}/grade`)}
                         className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"
                       >
                         Grade

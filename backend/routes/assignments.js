@@ -4,6 +4,8 @@ import Course from '../models/Course.js';
 import { authenticate, isTeacher } from '../middleware/auth.js';
 import { 
   validateCreateAssignment, 
+  validateUpdateAssignment,
+  validateSubmitAssignment,
   validateGradeAssignment, 
   validatePagination, 
   validateObjectId 
@@ -171,8 +173,14 @@ router.get('/:id', authenticate, validateObjectId('id'), async (req, res) => {
 // @route   PUT /api/assignments/:id
 // @desc    Update assignment
 // @access  Private (Assignment instructor only)
-router.put('/:id', authenticate, validateObjectId('id'), validateCreateAssignment, async (req, res) => {
+router.put('/:id', authenticate, validateObjectId('id'), validateUpdateAssignment, async (req, res) => {
   try {
+    console.log('Assignment update request:', {
+      assignmentId: req.params.id,
+      userId: req.user._id,
+      updateData: req.body
+    });
+
     const assignment = await Assignment.findById(req.params.id);
     
     if (!assignment) {
@@ -184,13 +192,26 @@ router.put('/:id', authenticate, validateObjectId('id'), validateCreateAssignmen
       return res.status(403).json({ message: 'Access denied. Only assignment instructor can update assignments.' });
     }
     
-    // Update assignment
-    Object.assign(assignment, req.body);
+    // Update assignment with validation
+    const allowedFields = ['title', 'description', 'instructions', 'dueDate', 'maxScore', 'submissionType', 'allowLateSubmission', 'lateSubmissionPenalty'];
+    const updateData = {};
+    
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    });
+    
+    console.log('Filtered update data:', updateData);
+    
+    Object.assign(assignment, updateData);
     await assignment.save();
     
     const populatedAssignment = await Assignment.findById(assignment._id)
       .populate('course', 'name code')
       .populate('instructor', 'profile.firstName profile.lastName email');
+    
+    console.log('Assignment updated successfully:', assignment.title);
     
     res.json({
       message: 'Assignment updated successfully',
@@ -198,6 +219,20 @@ router.put('/:id', authenticate, validateObjectId('id'), validateCreateAssignmen
     });
   } catch (error) {
     console.error('Update assignment error:', error);
+    
+    // Send detailed error information
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.keys(error.errors).map(key => ({
+        field: key,
+        message: error.errors[key].message
+      }));
+      
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: validationErrors
+      });
+    }
+    
     res.status(500).json({ message: 'Server error while updating assignment' });
   }
 });
@@ -230,7 +265,7 @@ router.delete('/:id', authenticate, validateObjectId('id'), async (req, res) => 
 // @route   POST /api/assignments/:id/submit
 // @desc    Submit assignment
 // @access  Private (Enrolled students only)
-router.post('/:id/submit', authenticate, validateObjectId('id'), async (req, res) => {
+router.post('/:id/submit', authenticate, validateObjectId('id'), validateSubmitAssignment, async (req, res) => {
   try {
     const assignment = await Assignment.findById(req.params.id);
     
@@ -249,20 +284,15 @@ router.post('/:id/submit', authenticate, validateObjectId('id'), async (req, res
       return res.status(403).json({ message: 'You must be enrolled in this course to submit assignments' });
     }
     
-    const { textSubmission, files } = req.body;
+    const { content } = req.body;
     
-    // Validate submission based on assignment type
-    if (assignment.submissionType === 'text' && !textSubmission) {
-      return res.status(400).json({ message: 'Text submission is required for this assignment' });
-    }
-    
-    if (assignment.submissionType === 'file' && (!files || files.length === 0)) {
-      return res.status(400).json({ message: 'File submission is required for this assignment' });
+    // Validate submission content
+    if (!content || !content.trim()) {
+      return res.status(400).json({ message: 'Submission content is required' });
     }
     
     const submissionData = {
-      textSubmission,
-      files: files || []
+      content: content.trim()
     };
     
     await assignment.submitAssignment(req.user._id, submissionData);
