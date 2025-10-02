@@ -180,7 +180,7 @@ function FeatureSection() {
           
           <p className="text-gray-500 text-xs">
             © 2025 AcademixOne. All rights reserved. | 
-            <span className="ml-2 text-gray-600">Version 0.0.1(beta)</span>
+            <span className="ml-2 text-gray-600">Version 1.10.2025</span>
           </p>
         </div>
       </div>

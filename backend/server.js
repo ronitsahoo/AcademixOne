@@ -159,7 +159,7 @@ const connectWithRetry = () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🌐 API URL: http://localhost:${PORT}/api`);
-      console.log(`� Socvket.io enabled for real-time chat`);
+      console.log(`� Socket.io enabled for real-time chat`);
     });
   })
   .catch((error) => {
