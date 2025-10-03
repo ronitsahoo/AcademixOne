@@ -296,6 +296,11 @@ class ApiService {
     return this.post(`/courses/${courseId}/modules`, moduleData);
   }
 
+  // Alias for createCourseModule for backward compatibility
+  async addCourseModule(courseId, moduleData) {
+    return this.createCourseModule(courseId, moduleData);
+  }
+
   async updateCourseModule(courseId, moduleId, moduleData) {
     return this.put(`/courses/${courseId}/modules/${moduleId}`, moduleData);
   }

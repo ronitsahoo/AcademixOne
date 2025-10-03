@@ -137,7 +137,7 @@ function CourseDetails() {
 
   const calculateProgress = (modules) => {
     if (!modules || modules.length === 0) return 0;
-    const completedModules = modules.filter(m => m.status === 'completed').length;
+    const completedModules = modules.filter(m => (m.status || 'not_started') === 'completed').length;
     return Math.round((completedModules / modules.length) * 100);
   };
 
@@ -147,17 +147,17 @@ function CourseDetails() {
         await apiService.updateCourse(courseId, editForm);
         setCourse({ ...course, ...editForm });
       } else if (editingType === 'module') {
-        await apiService.updateCourseModule(courseId, editingItem, editForm);
-        const updatedModules = course.modules.map(m => m._id === editingItem ? { ...m, ...editForm } : m);
-        const newProgress = calculateProgress(updatedModules);
+        const response = await apiService.updateCourseModule(courseId, editingItem, editForm);
         
-        // Update course progress
-        await apiService.updateCourse(courseId, { progress: newProgress });
+        // Use the updated modules from the backend response
+        const updatedModules = response.modules || course.modules.map(m => m._id === editingItem ? { ...m, ...editForm } : m);
+        const newProgress = calculateProgress(updatedModules);
         
         setCourse(prev => ({
           ...prev,
           modules: updatedModules,
-          progress: newProgress
+          progress: newProgress,
+          moduleProgress: response.moduleProgress || prev.moduleProgress
         }));
       } else if (editingType === 'resource') {
         // Update resource through course update
@@ -199,17 +199,17 @@ function CourseDetails() {
         await apiService.deleteCourse(courseId);
         navigate('/teacher-dashboard');
       } else if (type === 'module') {
-        await apiService.deleteCourseModule(courseId, itemId);
-        const updatedModules = course.modules.filter(m => m._id !== itemId);
-        const newProgress = calculateProgress(updatedModules);
+        const response = await apiService.deleteCourseModule(courseId, itemId);
         
-        // Update course progress
-        await apiService.updateCourse(courseId, { progress: newProgress });
+        // Use the updated modules from the backend response
+        const updatedModules = response.modules || course.modules.filter(m => m._id !== itemId);
+        const newProgress = calculateProgress(updatedModules);
         
         setCourse(prev => ({
           ...prev,
           modules: updatedModules,
-          progress: newProgress
+          progress: newProgress,
+          moduleProgress: response.moduleProgress || prev.moduleProgress
         }));
       } else if (type === 'resource') {
         // Delete resource through course update
@@ -237,17 +237,30 @@ function CourseDetails() {
   const handleAdd = async (type) => {
     try {
       if (type === 'module') {
-        const newModule = await apiService.addCourseModule(courseId, editForm);
-        const updatedModules = [...(course.modules || []), newModule.module];
-        const newProgress = calculateProgress(updatedModules);
+        // Ensure required fields and set defaults
+        const moduleData = {
+          title: editForm.title?.trim(),
+          description: editForm.description?.trim() || '',
+          status: 'not_started', // Set default status
+          // Don't include order - backend will set it automatically
+        };
         
-        // Update course progress
-        await apiService.updateCourse(courseId, { progress: newProgress });
+        // Validate required fields
+        if (!moduleData.title) {
+          throw new Error('Module title is required');
+        }
+        
+        const response = await apiService.addCourseModule(courseId, moduleData);
+        
+        // Backend returns the entire modules array after adding the new module
+        const updatedModules = response.modules || [];
+        const newProgress = calculateProgress(updatedModules);
         
         setCourse(prev => ({
           ...prev,
           modules: updatedModules,
-          progress: newProgress
+          progress: newProgress,
+          moduleProgress: response.moduleProgress || []
         }));
       } else if (type === 'resource') {
         // Add resource through course update
@@ -813,12 +826,12 @@ function CourseDetails() {
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{module.title}</h3>
                         <div className="flex items-center space-x-2">
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${module.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                              module.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${(module.status || 'not_started') === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                              (module.status || 'not_started') === 'in_progress' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                                 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
                             }`}>
-                            {module.status === 'completed' ? 'Completed' :
-                              module.status === 'in_progress' ? 'In Progress' : 'Not Started'}
+                            {(module.status || 'not_started') === 'completed' ? 'Completed' :
+                              (module.status || 'not_started') === 'in_progress' ? 'In Progress' : 'Not Started'}
                           </span>
                           {user?.role === 'teacher' && (
                             <div className="flex space-x-1">
@@ -896,17 +909,7 @@ function CourseDetails() {
                         onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         rows="3"
-                        placeholder="Enter module description"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Order</label>
-                      <input
-                        type="number"
-                        value={editForm.order || ''}
-                        onChange={(e) => setEditForm({ ...editForm, order: parseInt(e.target.value) })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        placeholder="Module order"
+                        placeholder="Enter module description (optional)"
                       />
                     </div>
                   </div>

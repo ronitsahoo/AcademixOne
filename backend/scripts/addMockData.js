@@ -10,10 +10,20 @@ dotenv.config();
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/academixone';
 
+// MongoDB connection options for Atlas
+const mongooseOptions = {
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+};
+
 async function addMockData() {
   try {
-    await mongoose.connect(MONGODB_URI);
-    console.log('Connected to MongoDB');
+    console.log('🔄 Connecting to MongoDB...');
+    console.log('📍 URI:', MONGODB_URI.replace(/\/\/.*@/, '//***:***@')); // Hide credentials
+    
+    await mongoose.connect(MONGODB_URI, mongooseOptions);
+    console.log('✅ Connected to MongoDB Atlas');
+    console.log('🏛️  Database:', mongoose.connection.db.databaseName);
 
     // Clear existing data
     await User.deleteMany({});
@@ -174,7 +184,7 @@ async function addMockData() {
       const submission = {
         student: students[i]._id,
         submittedAt: new Date(Date.now() - (i + 1) * 24 * 60 * 60 * 1000),
-        textSubmission: `print("Hello, World!") # Submission by ${students[i].profile.firstName}`,
+        content: `print("Hello, World!") # Submission by ${students[i].profile.firstName}`,
         status: i === 0 ? 'graded' : 'submitted',
         isLate: false,
         grade: {

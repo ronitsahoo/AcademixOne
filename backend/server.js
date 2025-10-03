@@ -30,7 +30,8 @@ dotenv.config();
 
 // Fallback environment variables
 if (!process.env.MONGODB_URI) {
-  process.env.MONGODB_URI = 'mongodb://localhost:27017/academixone';
+  console.warn('⚠️  MONGODB_URI not found in environment variables. Please configure MongoDB Atlas connection.');
+  process.env.MONGODB_URI = 'mongodb://localhost:27017/academixone'; // Fallback to local for development
 }
 if (!process.env.JWT_SECRET) {
   process.env.JWT_SECRET = '94e114560d59fd9ac38ac5c9b45d77f61b4637d58b9afc34e2b91bc7020eee91';
@@ -40,6 +41,9 @@ if (!process.env.JWT_SECRET) {
 console.log('🔍 Environment check:');
 console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'Found' : 'Missing');
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Found' : 'Missing');
+if (process.env.MONGODB_URI) {
+  console.log('📍 MongoDB URI preview:', process.env.MONGODB_URI.substring(0, 30) + '...');
+}
 
 const app = express();
 const server = createServer(app);
@@ -150,20 +154,36 @@ app.use('*', (req, res) => {
 // MongoDB connection with retry logic
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/academixone';
 
+// MongoDB Atlas connection options
+const mongooseOptions = {
+  serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+  socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+  maxPoolSize: 10, // Maintain up to 10 socket connections
+};
+
 const connectWithRetry = () => {
-  mongoose.connect(MONGODB_URI)
+  console.log('🔄 Attempting to connect to MongoDB...');
+  console.log('📍 Connection URI:', MONGODB_URI.replace(/\/\/.*@/, '//***:***@')); // Hide credentials in logs
+  
+  mongoose.connect(MONGODB_URI, mongooseOptions)
   .then(() => {
-    console.log('✅ Connected to MongoDB');
+    console.log('✅ Connected to MongoDB Atlas');
+    console.log('🏛️  Database:', mongoose.connection.db.databaseName);
     
     server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🌐 API URL: http://localhost:${PORT}/api`);
-      console.log(`� Socket.io enabled for real-time chat`);
+      console.log(`💬 Socket.io enabled for real-time chat`);
     });
   })
   .catch((error) => {
-    console.error('❌ MongoDB connection error:', error);
+    console.error('❌ MongoDB connection error:', error.message);
+    if (error.message.includes('authentication failed')) {
+      console.error('🔐 Check your MongoDB Atlas username and password');
+    } else if (error.message.includes('network')) {
+      console.error('🌐 Check your network connection and MongoDB Atlas network access settings');
+    }
     console.log('🔄 Retrying connection in 5 seconds...');
     setTimeout(connectWithRetry, 5000);
   });
@@ -185,20 +205,28 @@ mongoose.connection.on('reconnected', () => {
 connectWithRetry();
 
 // Graceful shutdown and error handling
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('SIGTERM received. Shutting down gracefully...');
-  mongoose.connection.close(() => {
+  try {
+    await mongoose.connection.close();
     console.log('MongoDB connection closed.');
     process.exit(0);
-  });
+  } catch (error) {
+    console.error('Error closing MongoDB connection:', error);
+    process.exit(1);
+  }
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   console.log('SIGINT received. Shutting down gracefully...');
-  mongoose.connection.close(() => {
+  try {
+    await mongoose.connection.close();
     console.log('MongoDB connection closed.');
     process.exit(0);
-  });
+  } catch (error) {
+    console.error('Error closing MongoDB connection:', error);
+    process.exit(1);
+  }
 });
 
 process.on('uncaughtException', (err) => {
