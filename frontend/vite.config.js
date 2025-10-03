@@ -9,7 +9,7 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: process.env.VITE_API_URL || 'http://localhost:3001',
         changeOrigin: true,
         secure: false,
       }
@@ -17,6 +17,19 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: false, // Disable sourcemaps in production for smaller bundle
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          socket: ['socket.io-client']
+        }
+      }
+    }
+  },
+  preview: {
+    port: 4173,
+    host: true
   }
 })

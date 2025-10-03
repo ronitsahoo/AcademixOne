@@ -1,275 +1,222 @@
-# AcademixOne - Academic Portal
+# AcademixOne Academic Portal
 
-A comprehensive academic portal with full-stack architecture, featuring authentication, role-based dashboards, course management, assignments, and attendance tracking.
+A comprehensive academic management system built with React, Node.js, and MongoDB.
 
-## Features
+## 🚀 Live Demo
 
-### 🔐 Authentication System
+- **Frontend**: [https://academixone-frontend.onrender.com](https://academixone-frontend.onrender.com)
+- **Backend API**: [https://academixone-backend.onrender.com](https://academixone-backend.onrender.com)
+- **API Health**: [https://academixone-backend.onrender.com/api/health](https://academixone-backend.onrender.com/api/health)
 
-- JWT-based secure authentication
-- Role-based access control (Students, Teachers, Admins)
-- Password hashing with bcrypt
-- Token refresh functionality
+[![Deploy Status](https://img.shields.io/badge/deploy-ready-brightgreen)](https://render.com)
+[![CI/CD](https://github.com/yourusername/academixone/workflows/CI%2FCD%20Pipeline/badge.svg)](https://github.com/yourusername/academixone/actions)
 
-### 👨‍🎓 Student Features
+## 📋 Features
 
-- **Dashboard**: Overview with stats and recent activity
-- **Course Management**: Enroll/drop from courses, view detailed course information
-- **Course Details**: Comprehensive course view with overview, assignments, and attendance
-- **Assignments**: Submit assignments, track due dates, view grades
-- **Attendance**: View attendance records and statistics
-- **Profile Management**: Update personal information, department, and semester
-- **First-time Setup**: Department and semester selection after first login
+- **Student Management**: Registration, profiles, course enrollment
+- **Course Management**: Create courses, modules, assignments
+- **Assignment System**: Submit, grade, and track assignments
+- **Attendance Tracking**: Mark and monitor student attendance
+- **Real-time Chat**: Course-specific communication
+- **Announcements**: Course updates and notifications
+- **Dashboard**: Role-based dashboards for students and teachers
 
-### 👨‍🏫 Teacher Features
-
-- **Dashboard**: Teaching statistics and course overview
-- **Course Management**: Create courses for multiple departments, update, and manage courses
-- **Student Management**: View enrolled students, manage enrollments
-- **Assignment Management**: Create assignments, grade submissions
-- **Attendance Management**: Mark attendance, generate reports
-- **File Upload**: Upload course resources and materials
-- **Multi-Department Support**: Assign courses to multiple departments of the same semester
-
-### 🎨 Modern UI/UX
-
-- Beautiful, responsive design with Tailwind CSS
-- Dark/light theme toggle
-- Mobile-friendly interface
-- Smooth animations and transitions
-
-## Tech Stack
-
-### Backend
-
-- **Node.js** with Express.js
-- **MongoDB** with Mongoose ODM
-- **JWT** for authentication
-- **Multer** for file uploads
-- **bcryptjs** for password hashing
-- **Express Validator** for input validation
+## 🛠️ Tech Stack
 
 ### Frontend
-
 - **React 19** with Vite
-- **React Router** for navigation
 - **Tailwind CSS** for styling
-- **Axios/Fetch** for API calls
+- **React Router** for navigation
+- **Socket.io Client** for real-time features
 
-## Getting Started
+### Backend
+- **Node.js** with Express
+- **MongoDB** with Mongoose
+- **JWT** for authentication
+- **Socket.io** for real-time communication
+- **Multer** for file uploads
 
-### Prerequisites
+### Deployment
+- **Render** for hosting
+- **GitHub Actions** for CI/CD
+- **MongoDB Atlas** for database
 
-- Node.js (v16 or higher)
-- MongoDB (local installation or MongoDB Atlas)
-- npm or yarn
-
-### Installation
-
-1. **Clone the repository**
-
-   ```bash
-   git clone <repository-url>
-   cd AcademixOne
-   ```
-
-2. **Install all dependencies**
-
-   ```bash
-   npm run install-all
-   ```
-
-3. **Setup environment files**
-
-   **Backend (.env):**
-
-   ```bash
-   cd backend
-   # Create .env file with your MongoDB URI
-   echo "NODE_ENV=development
-   PORT=5000
-   MONGODB_URI=mongodb://localhost:27017/academixone
-   JWT_SECRET=your_jwt_secret_key_here
-   JWT_EXPIRE=7d
-   FRONTEND_URL=http://localhost:5173
-   MAX_FILE_SIZE=5242880
-   UPLOAD_PATH=./uploads" > .env
-   ```
-
-   **Frontend (.env):**
-
-   ```bash
-   cd ../frontend
-   echo "VITE_API_URL=http://localhost:5000/api" > .env
-   ```
-
-4. **Seed the database**
-
-   ```bash
-   cd ../backend
-   npm run seed
-   ```
-
-5. **Start development servers**
-
-   ```bash
-   cd ..
-   npm run dev
-   ```
-
-6. **Access the Application**
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:5000/api
-
-### Sample Login Credentials
-
-After running the seed script, you can use these credentials:
-
-**Students:**
-
-- john.doe@student.edu / password123
-- jane.smith@student.edu / password123
-- mike.johnson@student.edu / password123
-
-**Teachers:**
-
-- rupali.kale@teacher.edu / password123
-- ravita.mishra@teacher.edu / password123
-- abhishek.chaudhari@teacher.edu / password123
-
-## API Documentation
-
-### Authentication Endpoints
-
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - User login
-- `GET /api/auth/me` - Get current user
-- `POST /api/auth/logout` - User logout
-- `POST /api/auth/change-password` - Change password
-
-### Course Endpoints
-
-- `GET /api/courses` - Get all courses
-- `POST /api/courses` - Create new course (Teachers only)
-- `GET /api/courses/:id` - Get course by ID
-- `PUT /api/courses/:id` - Update course
-- `DELETE /api/courses/:id` - Delete course
-- `POST /api/courses/:id/enroll` - Enroll in course
-- `DELETE /api/courses/:id/enroll` - Drop from course
-
-### Assignment Endpoints
-
-- `GET /api/assignments` - Get assignments
-- `POST /api/assignments` - Create assignment (Teachers only)
-- `GET /api/assignments/:id` - Get assignment by ID
-- `POST /api/assignments/:id/submit` - Submit assignment
-- `PUT /api/assignments/:id/grade/:studentId` - Grade assignment
-
-### Attendance Endpoints
-
-- `GET /api/attendance` - Get attendance records
-- `POST /api/attendance` - Create attendance session
-- `PUT /api/attendance/:id/mark` - Mark attendance
-- `GET /api/attendance/student/:studentId/summary` - Get student attendance summary
-
-## Database Schema
-
-### User Model
-
-- Email, password (hashed), role (student/teacher/admin)
-- Profile information (name, phone, department, etc.)
-- Enrolled/teaching courses references
-
-### Course Model
-
-- Course details (name, code, description, credits)
-- Instructor reference
-- Enrolled students with status
-- Schedule and syllabus information
-
-### Assignment Model
-
-- Assignment details and instructions
-- Course and instructor references
-- Student submissions with grades
-- File attachments support
-
-### Attendance Model
-
-- Course and date information
-- Student attendance records
-- Session details and statistics
-
-## File Structure
+## 🏗️ Project Structure
 
 ```
 AcademixOne/
-├── backend/
-│   ├── models/          # Database models
-│   ├── routes/          # API routes
-│   ├── middleware/      # Authentication & validation
-│   ├── scripts/         # Database seeding
-│   ├── uploads/         # File uploads
-│   └── server.js        # Main server file
-├── frontend/
+├── backend/                 # Node.js API server
+│   ├── models/             # MongoDB models
+│   ├── routes/             # API routes
+│   ├── middleware/         # Authentication & validation
+│   ├── socket/             # Socket.io handlers
+│   └── server.js           # Main server file
+├── frontend/               # React application
 │   ├── src/
-│   │   ├── components/  # Reusable components
-│   │   ├── pages/       # Page components
-│   │   ├── services/    # API service layer
-│   │   └── styles/      # Global styles
-│   └── public/          # Static assets
-└── README.md
+│   │   ├── components/     # Reusable components
+│   │   ├── pages/          # Page components
+│   │   ├── services/       # API service layer
+│   │   └── utils/          # Utility functions
+│   └── dist/               # Built files
+├── .github/workflows/      # GitHub Actions
+└── render.yaml            # Render deployment config
 ```
 
-## Development
+## 🚀 Quick Start
 
-### Backend Development
+### Prerequisites
+- Node.js 18+
+- MongoDB Atlas account
+- Git
+
+### Local Development
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/yourusername/academixone.git
+   cd academixone
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm run install:all
+   ```
+
+3. **Set up environment variables**:
+   
+   Backend (`backend/.env`):
+   ```env
+   MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/academixone
+   JWT_SECRET=your-super-secure-jwt-secret
+   NODE_ENV=development
+   PORT=3001
+   ```
+   
+   Frontend (`frontend/.env`):
+   ```env
+   VITE_API_URL=http://localhost:3001
+   ```
+
+4. **Start development servers**:
+   ```bash
+   npm run dev
+   ```
+
+5. **Seed database** (optional):
+   ```bash
+   npm run seed
+   ```
+
+### Access the Application
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:3001
+- API Health Check: http://localhost:3001/api/health
+
+## 🚀 Deployment
+
+This project is configured for automatic deployment to Render using GitHub Actions.
+
+### Quick Deploy to Render
+
+1. **Fork this repository**
+2. **Set up MongoDB Atlas** (see [MongoDB Atlas Setup Guide](backend/MONGODB_ATLAS_SETUP.md))
+3. **Deploy to Render**:
+   - Go to [Render Dashboard](https://dashboard.render.com)
+   - Click "New" → "Blueprint"
+   - Connect your GitHub repository
+   - Render will create both frontend and backend services
+
+4. **Configure Environment Variables** in Render Dashboard:
+   ```
+   MONGODB_URI=your-mongodb-atlas-connection-string
+   JWT_SECRET=your-super-secure-jwt-secret
+   NODE_ENV=production
+   ```
+
+5. **Push to main branch** to trigger deployment:
+   ```bash
+   git push origin main
+   ```
+
+For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
+## 📚 API Documentation
+
+### Authentication
+- `POST /api/auth/login` - User login
+- `POST /api/auth/register` - User registration
+- `GET /api/auth/me` - Get current user
+
+### Courses
+- `GET /api/courses` - Get all courses
+- `POST /api/courses` - Create course (teachers only)
+- `GET /api/courses/:id` - Get course details
+- `POST /api/courses/:id/enroll` - Enroll in course
+
+### Assignments
+- `GET /api/assignments` - Get assignments
+- `POST /api/assignments` - Create assignment
+- `POST /api/assignments/:id/submit` - Submit assignment
+
+### More endpoints available - see route files in `backend/routes/`
+
+## 🧪 Testing
 
 ```bash
-cd backend
-npm run dev  # Start with nodemon for auto-reload
+# Test database connection
+npm run test:db
+
+# Run linting
+npm run lint
+
+# Build for production
+npm run build
 ```
 
-### Frontend Development
+## 🔧 Development
 
-```bash
-cd frontend
-npm run dev  # Start Vite dev server
-```
+### Adding New Features
 
-### Database Management
+1. **Backend**: Add routes in `backend/routes/`, models in `backend/models/`
+2. **Frontend**: Add components in `frontend/src/components/`, pages in `frontend/src/pages/`
+3. **API Integration**: Update `frontend/src/services/api.js`
 
-```bash
-cd backend
-npm run seed  # Populate database with sample data
-```
+### Environment Variables
 
-## Deployment
+#### Backend
+- `MONGODB_URI` - MongoDB connection string
+- `JWT_SECRET` - JWT signing secret
+- `NODE_ENV` - Environment (development/production)
+- `PORT` - Server port
+- `FRONTEND_URL` - Frontend URL for CORS
 
-### Backend Deployment
+#### Frontend
+- `VITE_API_URL` - Backend API URL
 
-1. Set up MongoDB Atlas or your preferred MongoDB hosting
-2. Configure environment variables for production
-3. Deploy to your preferred platform (Heroku, DigitalOcean, AWS, etc.)
-
-### Frontend Deployment
-
-1. Build the production bundle: `npm run build`
-2. Deploy the `dist` folder to your preferred hosting (Netlify, Vercel, etc.)
-3. Update the API URL in environment variables
-
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
+2. Create a feature branch: `git checkout -b feature/new-feature`
+3. Commit changes: `git commit -am 'Add new feature'`
+4. Push to branch: `git push origin feature/new-feature`
 5. Submit a pull request
 
-## License
+## 📝 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Support
+## 🆘 Support
 
-For support, email support@academixone.com or create an issue in the repository.
+- **Documentation**: Check [DEPLOYMENT.md](DEPLOYMENT.md) for deployment help
+- **Database Setup**: See [MongoDB Atlas Setup Guide](backend/MONGODB_ATLAS_SETUP.md)
+- **Issues**: Open an issue on GitHub
+
+## 🎯 Default Login Credentials
+
+After seeding the database:
+- **Teacher**: teacher@example.com / password123
+- **Students**: student1@example.com to student5@example.com / password123
+
+---
+
+Built with ❤️ by the AcademixOne Team
