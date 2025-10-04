@@ -3,7 +3,7 @@ services:
   - type: web
     name: academixone-backend
     runtime: node
-    plan: free
+    plan: starter
     buildCommand: cd backend && npm install --production=false
     startCommand: cd backend && npm start
     healthCheckPath: /api/health
@@ -14,9 +14,9 @@ services:
       - key: PORT
         value: 10000
       - key: MONGODB_URI
-        sync: false # Set this in Render dashboard
+        sync: false
       - key: JWT_SECRET
-        sync: false # Set this in Render dashboard
+        sync: false
       - key: FRONTEND_URL
         value: https://academixone-frontend.onrender.com
 
@@ -24,7 +24,7 @@ services:
   - type: web
     name: academixone-frontend
     runtime: static
-    plan: free
+    plan: starter
     buildCommand: cd frontend && npm install && VITE_API_URL=https://academixone-backend.onrender.com npm run build
     staticPublishPath: frontend/dist
     pullRequestPreviewsEnabled: false
