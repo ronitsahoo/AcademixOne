@@ -34,6 +34,9 @@ async function testConnection() {
     const mongooseOptions = {
       serverSelectionTimeoutMS: 10000, // 10 seconds timeout
       socketTimeoutMS: 45000,
+      ssl: true,
+      tls: true,
+      retryWrites: true,
     };
     
     console.log('⏳ Attempting connection...');

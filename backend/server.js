@@ -168,9 +168,13 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/academ
 
 // MongoDB Atlas connection options
 const mongooseOptions = {
-  serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+  serverSelectionTimeoutMS: 10000, // Keep trying to send operations for 10 seconds
   socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
   maxPoolSize: 10, // Maintain up to 10 socket connections
+  ssl: true, // Ensure SSL is enabled
+  tls: true, // Enable TLS
+  tlsAllowInvalidCertificates: false, // Validate certificates
+  retryWrites: true, // Enable retryable writes
 };
 
 const connectWithRetry = () => {
