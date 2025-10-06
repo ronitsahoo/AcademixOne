@@ -1,22 +1,42 @@
-name: Deploy to Render
-
-on:
-  push:
-    branches:
-      - main  # or your deploy branch
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger backend deploy
-        run: |
-          curl -X POST "https://api.render.com/v1/services/${{ secrets.srv-d3gm337fte5s73c9p1ag}}/deploys" \
-          -H "Accept: application/json" \
-          -H "Authorization: Bearer ${{ secrets.rnd_HY7EcehpdQAaHRnJB1LcLZdVw8kk}}"
-      
-      - name: Trigger frontend deploy
-        run: |
-          curl -X POST "https://api.render.com/v1/services/${{ secrets.srv-d3gmb3b3fgac7395im6g }}/deploys" \
-          -H "Accept: application/json" \
-          -H "Authorization: Bearer ${{ secrets.rnd_HY7EcehpdQAaHRnJB1LcLZdVw8kk }}"
+services:
+  # Backend API Service
+  - type: web
+    name: academixone-backend
+    runtime: node
+    plan: free
+    buildCommand: cd backend && npm install --production=false
+    startCommand: cd backend && npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false # Set this in Render dashboard
+      - key: JWT_SECRET
+        sync: false # Set this in Render dashboard
+      - key: FRONTEND_URL
+        value: https://academixone-frontend.onrender.com
+    
+  # Frontend Static Site
+  - type: web
+    name: academixone-frontend
+    runtime: static
+    plan: free
+    buildCommand: cd frontend && npm install && VITE_API_URL=https://academixone-backend.onrender.com npm run build
+    staticPublishPath: frontend/dist
+    pullRequestPreviewsEnabled: false
+    autoDeploy: true
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    envVars:
+      - key: VITE_API_URL
+        value: https://academixone-backend.onrender.com

@@ -1,0 +1,22 @@
+name: Deploy to Render
+
+on:
+  push:
+    branches:
+      - main  # or your deploy branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger backend deploy
+        run: |
+          curl -X POST "https://api.render.com/v1/services/${{ secrets.srv-d3gm337fte5s73c9p1ag}}/deploys" \
+          -H "Accept: application/json" \
+          -H "Authorization: Bearer ${{ secrets.rnd_HY7EcehpdQAaHRnJB1LcLZdVw8kk}}"
+      
+      - name: Trigger frontend deploy
+        run: |
+          curl -X POST "https://api.render.com/v1/services/${{ secrets.srv-d3gmb3b3fgac7395im6g }}/deploys" \
+          -H "Accept: application/json" \
+          -H "Authorization: Bearer ${{ secrets.rnd_HY7EcehpdQAaHRnJB1LcLZdVw8kk }}"
